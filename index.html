@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mi Día">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%2334C759'/%3E%3Ctext x='90' y='118' font-size='90' text-anchor='middle' fill='white' font-family='-apple-system'%3E📋%3C/text%3E%3C/svg%3E">
+<title>Mi Día</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --text: #000000;
+    --text-2: #8E8E93;
+    --separator: #E5E5EA;
+    --green: #34C759;
+    --red: #FF3B30;
+    --blue: #007AFF;
+    --orange: #FF9500;
+    --purple: #AF52DE;
+    --yellow: #FFCC00;
+  }
+  html, body {
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+    color: var(--text);
+    overscroll-behavior-y: none;
+    height: 100%;
+  }
+  body {
+    padding-bottom: calc(83px + env(safe-area-inset-bottom));
+    padding-top: env(safe-area-inset-top);
+  }
+  .app { max-width: 640px; margin: 0 auto; min-height: 100vh; }
+
+  /* Header */
+  .header {
+    padding: 8px 20px 12px;
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(242, 242, 247, 0.85);
+  }
+  .header h1 {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+  }
+  .header .date { font-size: 15px; color: var(--text-2); margin-top: 2px; }
+
+  /* Sections */
+  .view { display: none; padding: 0 16px 20px; }
+  .view.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .card-title {
+    font-size: 13px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 0 16px 8px;
+    margin-top: 24px;
+    font-weight: 500;
+  }
+  .row {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 0.5px solid var(--separator);
+    min-height: 44px;
+  }
+  .row:last-child { border-bottom: none; }
+  .row-left { display: flex; align-items: center; gap: 12px; flex: 1; }
+  .row-icon {
+    width: 30px; height: 30px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+  .row-text { font-size: 17px; flex: 1; }
+  .row-text.checked { text-decoration: line-through; color: var(--text-2); }
+  .row-detail { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+
+  /* Checkbox circle */
+  .check {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid #C7C7CC;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .check.on {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .check.on::after {
+    content: '✓'; color: white; font-size: 14px; font-weight: 700;
+  }
+
+  /* Habit toggle (3-state for food: bien/mal/sin) */
+  .habit-toggle {
+    display: flex; gap: 6px;
+  }
+  .h-btn {
+    border: none;
+    background: var(--separator);
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .h-btn.active-good { background: var(--green); color: white; }
+  .h-btn.active-bad { background: var(--red); color: white; }
+
+  /* Tab bar */
+  .tabbar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid var(--separator);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 100;
+  }
+  .tabs {
+    display: flex;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .tab {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 8px 0 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: var(--text-2);
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .tab.active { color: var(--blue); }
+  .tab-icon { font-size: 22px; }
+
+  /* Menu day */
+  .day-card {
+    background: var(--card);
+    border-radius: 14px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .day-header {
+    padding: 12px 16px;
+    background: var(--bg);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-bottom: 0.5px solid var(--separator);
+  }
+  .opt {
+    padding: 14px 16px;
+    border-bottom: 0.5px solid var(--separator);
+  }
+  .opt:last-child { border-bottom: none; }
+  .opt-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    margin-bottom: 4px;
+  }
+  .opt-text { font-size: 15px; line-height: 1.35; }
+
+  /* Stats */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .stat-label { font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
+  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .stat-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+  /* Heatmap */
+  .heatmap {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .hm-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .hm-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .hm-day {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: var(--separator);
+  }
+  .hm-day.l1 { background: #C8F0D2; }
+  .hm-day.l2 { background: #80D896; }
+  .hm-day.l3 { background: #4CC267; }
+  .hm-day.l4 { background: var(--green); }
+  .hm-legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-2);
+    margin-top: 10px;
+    justify-content: flex-end;
+  }
+  .hm-leg { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* Filter chips */
+  .chips {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    border: none;
+    background: var(--card);
+    padding: 8px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .chip.active { background: var(--blue); color: white; }
+
+  /* Reset button */
+  .reset-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--card);
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    color: var(--red);
+    font-weight: 500;
+    margin-top: 16px;
+    cursor: pointer;
+  }
+
+  /* Date nav for tracker */
+  .date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+  .date-nav button {
+    border: none;
+    background: none;
+    font-size: 22px;
+    color: var(--blue);
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .date-nav .current {
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  /* Hidden by default for sub-views */
+  .recipe {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .recipe h3 { font-size: 17px; margin-bottom: 6px; }
+  .recipe p { font-size: 14px; line-height: 1.4; color: #3C3C43; margin-bottom: 6px; }
+  .recipe .label { font-weight: 600; color: var(--text); }
+
+  .empty { text-align: center; color: var(--text-2); padding: 40px 20px; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HOY (TRACKER) -->
+  <div class="view active" id="view-hoy">
+    <div class="header">
+      <h1>Hoy</h1>
+      <div class="date" id="today-date"></div>
+    </div>
+
+    <div class="date-nav">
+      <button onclick="changeDate(-1)">‹</button>
+      <div class="current" id="current-date"></div>
+      <button onclick="changeDate(1)">›</button>
+    </div>
+
+    <div class="card-title">Hábitos</div>
+    <div class="card" id="habits-card"></div>
+
+    <div class="card-title">Comida del día</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-left">
+          <div class="row-icon" style="background:#FFE5E5;color:var(--red)">🍽</div>
+          <div class="row-text">¿Comiste bien hoy?</div>
+        </div>
+        <div class="habit-toggle" id="food-toggle">
+          <button class="h-btn" onclick="setFood('good')">Bien</button>
+          <button class="h-btn" onclick="setFood('bad')">Mal</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MENÚ -->
+  <div class="view" id="view-menu">
+    <div class="header">
+      <h1>Menú</h1>
+      <div class="date">Semana A / B</div>
+    </div>
+    <div class="chips">
+      <button class="chip active" onclick="filterMenu('A', this)">Opción A</button>
+      <button class="chip" onclick="filterMenu('B', this)">Opción B</button>
+      <button class="chip" onclick="filterMenu('viandas', this)">Viandas Maite</button>
+    </div>
+    <div id="menu-content"></div>
+  </div>
+
+  <!-- COMPRAS -->
+  <div class="view" id="view-compras">
+    <div class="header">
+      <h1>Compras</h1>
+      <div class="date" id="compras-progress">0 de 0 marcados</div>
+    </div>
+    <div class="chips">
+      <button class="chip active" onclick="filterCompras('mensual', this)">Mensuales</button>
+      <button class="chip" onclick="filterCompras('semanaA', this)">Semana A</button>
+      <button class="chip" onclick="filterCompras('semanaB', this)">Semana B</button>
+    </div>
+    <div id="compras-content"></div>
+    <button class="reset-btn" onclick="resetCompras()">Desmarcar todo</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="view" id="view-stats">
+    <div class="header">
+      <h1>Estadísticas</h1>
+      <div class="date" id="stats-month"></div>
+    </div>
+    <div class="stat-grid" id="stat-grid"></div>
+    <div class="heatmap">
+      <div class="hm-title">Cumplimiento últimos 35 días</div>
+      <div class="hm-grid" id="heatmap"></div>
+      <div class="hm-legend">
+        <span>Menos</span>
+        <span class="hm-leg" style="background:var(--separator)"></span>
+        <span class="hm-leg l1"></span>
+        <span class="hm-leg l2"></span>
+        <span class="hm-leg l3"></span>
+        <span class="hm-leg l4"></span>
+        <span>Más</span>
+      </div>
+    </div>
+    <div class="card-title">Rachas actuales</div>
+    <div class="card" id="streaks-card"></div>
+  </div>
+
+</div>
+
+<!-- TAB BAR -->
+<nav class="tabbar">
+  <div class="tabs">
+    <button class="tab active" onclick="showView('hoy', this)">
+      <span class="tab-icon">✓</span>
+      <span>Hoy</span>
+    </button>
+    <button class="tab" onclick="showView('menu', this)">
+      <span class="tab-icon">🍽</span>
+      <span>Menú</span>
+    </button>
+    <button class="tab" onclick="showView('compras', this)">
+      <span class="tab-icon">🛒</span>
+      <span>Compras</span>
+    </button>
+    <button class="tab" onclick="showView('stats', this)">
+      <span class="tab-icon">📊</span>
+      <span>Stats</span>
+    </button>
+  </div>
+</nav>
+
+<script>
+// ============ DATA ============
+const HABITS = [
+  { id: 'ejercicio', label: 'Ejercicio', icon: '💪', color: '#FF9500', bg: '#FFF0DB' },
+  { id: 'pastillas', label: 'Pastillas', icon: '💊', color: '#007AFF', bg: '#DCEBFF' },
+  { id: 'creatina', label: 'Creatina', icon: '🥤', color: '#AF52DE', bg: '#F2E1FB' },
+  { id: 'pasos', label: '10k pasos', icon: '👟', color: '#34C759', bg: '#D6F4DD' },
+];
+
+const MENU = {
+  A: [
+    { dia: 'Lunes', plato: 'Merluza al horno con papas, cebolla y morrón + ensalada verde' },
+    { dia: 'Martes', plato: 'Guiso mixto (lentejas + porotos) con calabaza, zanahoria y choclo' },
+    { dia: 'Miércoles', plato: 'Pollo al horno con batata + coliflor asado con ajo y parmesano' },
+    { dia: 'Jueves', plato: 'Tarta de acelga y queso + ensalada de zanahoria y huevo duro' },
+    { dia: 'Viernes', plato: 'Salmón a la plancha + quinoa con hongos + brócoli salteado' },
+  ],
+  B: [
+    { dia: 'Lunes', plato: 'Wok de pollo con morrón, brócoli y cebolla + arroz integral' },
+    { dia: 'Martes', plato: 'Risotto de hongos con parmesano + ensalada rúcula y tomate' },
+    { dia: 'Miércoles', plato: 'Pastel de calabaza y osobuco + ensalada' },
+    { dia: 'Jueves', plato: 'Milanesas de berenjena al horno con puré mixto' },
+    { dia: 'Viernes', plato: 'Canelones de acelga y ricota + ensalada verde' },
+  ],
+  viandas: [
+    { dia: 'Lunes', desayuno: 'Hummus + bastones zanahoria/pepino', merienda: 'Muffin banana + manzana' },
+    { dia: 'Martes', desayuno: 'Chipá (3) + uvas', merienda: 'Hummus + bastones' },
+    { dia: 'Miércoles', desayuno: 'Muffin zanahoria + mandarina', merienda: 'Galletitas avena-banana + manzana' },
+    { dia: 'Jueves', desayuno: 'Hummus + bastones', merienda: 'Barrita casera + banana' },
+    { dia: 'Viernes', desayuno: 'Scones integrales + mandarina', merienda: 'Chipá + uvas' },
+  ]
+};
+
+const COMPRAS = {
+  mensual: [
+    { cat: 'Despensa', items: [
+      ['Arroz integral', '2 kg'], ['Quinoa', '1 kg'], ['Lentejas', '1 kg'],
+      ['Porotos colorados', '1 kg'], ['Garbanzos', '2 kg'], ['Masa canelones', '2 paq.'],
+      ['Harina integral', '1 kg'], ['Harina común', '1 kg'], ['Avena', '1 kg'],
+      ['Polvo hornear', '1 paq.'], ['Tomate triturado', '6 latas'], ['Choclo lata', '4 latas']
+    ]},
+    { cat: 'Aceites/Especias', items: [
+      ['Aceite oliva', '750 ml'], ['Aceite girasol', '1.5 L'], ['Vinagre', '500 ml'],
+      ['Sal', '1 kg'], ['Pimienta', '100 g'], ['Ajo polvo', '1 frasco'],
+      ['Comino', '1 frasco'], ['Pimentón', '1 frasco'], ['Orégano', '1 frasco'],
+      ['Miel', '500 g'], ['Tahini', '500 g']
+    ]},
+    { cat: 'Carnes para congelar', items: [
+      ['Pechuga de pollo', '4 kg (8×500g)'], ['Merluza filet', '3 kg (7×400g)'],
+      ['Salmón filet', '2 kg (5×400g)'], ['Osobuco', '2 kg (4×500g)']
+    ]}
+  ],
+  semanaA: [
+    { cat: 'Verduras', items: [
+      ['Papas', '2 kg'], ['Batata', '1 kg'], ['Calabaza', '1'], ['Coliflor', '1'],
+      ['Acelga', '2 atados'], ['Lechuga', '2'], ['Zanahoria', '1.5 kg'], ['Pepino', '4'],
+      ['Zapallitos', '6'], ['Cebolla', '1 kg'], ['Morrón', '4'], ['Brócoli', '2'],
+      ['Palta', '2'], ['Hongos frescos', '400 g']
+    ]},
+    { cat: 'Frutas', items: [
+      ['Limones', '6'], ['Bananas', '1.5 kg'], ['Manzanas', '1.5 kg'],
+      ['Mandarinas', '1 kg'], ['Peras', '1 kg'], ['Uvas', '500 g']
+    ]},
+    { cat: 'Lácteos/Pan', items: [
+      ['Huevos', '30'], ['Leche', '4 L'], ['Queso rallado', '300 g'],
+      ['Ricota', '500 g'], ['Manteca', '200 g'], ['Yogur natural', '1 kg'],
+      ['Pan lactal int.', '2 paq.'], ['Galletitas agua', '1 paq.']
+    ]}
+  ],
+  semanaB: [
+    { cat: 'Verduras', items: [
+      ['Morrón', '4'], ['Brócoli', '2'], ['Cebolla', '1 kg'], ['Rúcula', '2 bolsas'],
+      ['Tomate', '1 kg'], ['Calabaza', '1'], ['Lechuga', '2'], ['Berenjenas', '4'],
+      ['Papas', '2 kg'], ['Zanahoria', '1.5 kg'], ['Acelga', '2 atados'],
+      ['Pepino', '4'], ['Zapallitos', '6'], ['Palta', '2'], ['Hongos frescos', '400 g']
+    ]},
+    { cat: 'Frutas', items: [
+      ['Limones', '6'], ['Bananas', '1.5 kg'], ['Manzanas', '1.5 kg'],
+      ['Mandarinas', '1 kg'], ['Peras', '1 kg'], ['Uvas', '500 g']
+    ]},
+    { cat: 'Lácteos/Pan', items: [
+      ['Huevos', '30'], ['Leche', '4 L'], ['Queso rallado', '400 g'],
+      ['Ricota', '500 g'], ['Manteca', '200 g'], ['Yogur natural', '1 kg'],
+      ['Pan lactal int.', '2 paq.'], ['Galletitas agua', '1 paq.']
+    ]}
+  ]
+};
+
+// ============ STATE ============
+let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
+
+function dateKey(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getTracker() {
+  return JSON.parse(localStorage.getItem('tracker') || '{}');
+}
+function saveTracker(data) {
+  localStorage.setItem('tracker', JSON.stringify(data));
+}
+function getDay(date) {
+  const data = getTracker();
+  return data[dateKey(date)] || {};
+}
+function setDay(date, key, value) {
+  const data = getTracker();
+  const k = dateKey(date);
+  data[k] = data[k] || {};
+  data[k][key] = value;
+  saveTracker(data);
+}
+
+function getCompras() {
+  return JSON.parse(localStorage.getItem('compras') || '{}');
+}
+function setCompra(id, value) {
+  const data = getCompras();
+  data[id] = value;
+  localStorage.setItem('compras', JSON.stringify(data));
+}
+
+let currentMenu = 'A';
+let currentCompras = 'mensual';
+
+// ============ RENDER ============
+function fmtDate(d) {
+  return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function renderHoy() {
+  document.getElementById('today-date').textContent = fmtDate(new Date());
+  const today = new Date(); today.setHours(0,0,0,0);
+  const isToday = currentDate.getTime() === today.getTime();
+  document.getElementById('current-date').textContent = isToday ? 'Hoy' : fmtDate(currentDate);
+
+  const day = getDay(currentDate);
+  const card = document.getElementById('habits-card');
+  card.innerHTML = HABITS.map(h => `
+    <div class="row" onclick="toggleHabit('${h.id}')">
+      <div class="row-left">
+        <div class="row-icon" style="background:${h.bg};color:${h.color}">${h.icon}</div>
+        <div class="row-text ${day[h.id] ? 'checked' : ''}">${h.label}</div>
+      </div>
+      <div class="check ${day[h.id] ? 'on' : ''}"></div>
+    </div>
+  `).join('');
+
+  const foodToggle = document.getElementById('food-toggle');
+  foodToggle.children[0].className = 'h-btn' + (day.food === 'good' ? ' active-good' : '');
+  foodToggle.children[1].className = 'h-btn' + (day.food === 'bad' ? ' active-bad' : '');
+}
+
+function toggleHabit(id) {
+  const day = getDay(currentDate);
+  setDay(currentDate, id, !day[id]);
+  renderHoy();
+}
+
+function setFood(val) {
+  const day = getDay(currentDate);
+  setDay(currentDate, 'food', day.food === val ? null : val);
+  renderHoy();
+}
+
+function changeDate(delta) {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() + delta);
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (d > today) return;
+  currentDate = d;
+  renderHoy();
+}
+
+function renderMenu() {
+  const c = document.getElementById('menu-content');
+  if (currentMenu === 'viandas') {
+    c.innerHTML = MENU.viandas.map(d => `
+      <div class="day-card">
+        <div class="day-header">${d.dia}</div>
+        <div class="opt"><div class="opt-label">DESAYUNO</div><div class="opt-text">${d.desayuno}</div></div>
+        <div class="opt"><div class="opt-label">MERIENDA</div><div class="opt-text">${d.merienda}</div></div>
+      </div>
+    `).join('');
+  } else {
+    c.innerHTML = MENU[currentMenu].map(d => `
+      <div class="day-card">
+        <div class="day-header">${d.dia}</div>
+        <div class="opt"><div class="opt-text">${d.plato}</div></div>
+      </div>
+    `).join('');
+  }
+}
+
+function filterMenu(opt, btn) {
+  currentMenu = opt;
+  document.querySelectorAll('#view-menu .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderMenu();
+}
+
+function renderCompras() {
+  const c = document.getElementById('compras-content');
+  const compras = getCompras();
+  let total = 0, done = 0;
+  c.innerHTML = COMPRAS[currentCompras].map(g => {
+    return `<div class="card-title">${g.cat}</div><div class="card">` +
+      g.items.map(([nombre, cant]) => {
+        const id = `${currentCompras}-${nombre}`;
+        const checked = !!compras[id];
+        total++; if (checked) done++;
+        return `
+          <div class="row" onclick="toggleCompra('${id}')">
+            <div class="row-left">
+              <div class="row-text ${checked ? 'checked' : ''}">${nombre}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="row-detail" style="margin:0">${cant}</div>
+              <div class="check ${checked ? 'on' : ''}"></div>
+            </div>
+          </div>
+        `;
+      }).join('') + `</div>`;
+  }).join('');
+  document.getElementById('compras-progress').textContent = `${done} de ${total} marcados`;
+}
+
+function toggleCompra(id) {
+  const compras = getCompras();
+  setCompra(id, !compras[id]);
+  renderCompras();
+}
+
+function filterCompras(opt, btn) {
+  currentCompras = opt;
+  document.querySelectorAll('#view-compras .chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderCompras();
+}
+
+function resetCompras() {
+  if (confirm('¿Desmarcar todos los items de esta lista?')) {
+    const compras = getCompras();
+    Object.keys(compras).forEach(k => {
+      if (k.startsWith(currentCompras + '-')) delete compras[k];
+    });
+    localStorage.setItem('compras', JSON.stringify(compras));
+    renderCompras();
+  }
+}
+
+function renderStats() {
+  const data = getTracker();
+  const now = new Date();
+  document.getElementById('stats-month').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+
+  // % cumplimiento mes actual
+  const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const today = now.getDate();
+
+  const stats = HABITS.map(h => {
+    let count = 0;
+    for (let i = 1; i <= today; i++) {
+      const k = `${monthKey}-${String(i).padStart(2,'0')}`;
+      if (data[k] && data[k][h.id]) count++;
+    }
+    return { ...h, count, pct: today ? Math.round(count/today*100) : 0 };
+  });
+
+  // Foods
+  let goodFood = 0, badFood = 0;
+  for (let i = 1; i <= today; i++) {
+    const k = `${monthKey}-${String(i).padStart(2,'0')}`;
+    if (data[k]?.food === 'good') goodFood++;
+    if (data[k]?.food === 'bad') badFood++;
+  }
+
+  const grid = document.getElementById('stat-grid');
+  grid.innerHTML = stats.map(s => `
+    <div class="stat">
+      <div class="stat-label">${s.icon} ${s.label}</div>
+      <div class="stat-value" style="color:${s.color}">${s.pct}%</div>
+      <div class="stat-sub">${s.count}/${today} días</div>
+    </div>
+  `).join('') + `
+    <div class="stat">
+      <div class="stat-label">🍽 Comida bien</div>
+      <div class="stat-value" style="color:var(--green)">${goodFood}</div>
+      <div class="stat-sub">${badFood} mal · ${today - goodFood - badFood} sin registrar</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">📅 Día del mes</div>
+      <div class="stat-value">${today}/${daysInMonth}</div>
+      <div class="stat-sub">${daysInMonth - today} días restantes</div>
+    </div>
+  `;
+
+  // Heatmap últimos 35 días
+  const hm = document.getElementById('heatmap');
+  let hmHtml = '';
+  for (let i = 34; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const k = dateKey(d);
+    const day = data[k] || {};
+    let count = 0;
+    HABITS.forEach(h => { if (day[h.id]) count++; });
+    if (day.food === 'good') count++;
+    const total = HABITS.length + 1;
+    let lvl = '';
+    if (count > 0 && count <= total*0.25) lvl = 'l1';
+    else if (count <= total*0.5) lvl = 'l2';
+    else if (count <= total*0.75) lvl = 'l3';
+    else if (count > total*0.75) lvl = 'l4';
+    hmHtml += `<div class="hm-day ${lvl}" title="${k}: ${count}/${total}"></div>`;
+  }
+  hm.innerHTML = hmHtml;
+
+  // Rachas
+  const streaks = HABITS.map(h => {
+    let streak = 0;
+    let d = new Date(now);
+    while (true) {
+      const k = dateKey(d);
+      if (data[k]?.[h.id]) { streak++; d.setDate(d.getDate()-1); }
+      else break;
+    }
+    return { ...h, streak };
+  });
+  document.getElementById('streaks-card').innerHTML = streaks.map(s => `
+    <div class="row">
+      <div class="row-left">
+        <div class="row-icon" style="background:${s.bg};color:${s.color}">${s.icon}</div>
+        <div class="row-text">${s.label}</div>
+      </div>
+      <div style="font-size:17px;font-weight:600;color:${s.streak > 0 ? s.color : 'var(--text-2)'}">
+        ${s.streak} ${s.streak === 1 ? 'día' : 'días'} 🔥
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============ NAVIGATION ============
+function showView(view, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  if (view === 'menu') renderMenu();
+  if (view === 'compras') renderCompras();
+  if (view === 'stats') renderStats();
+  if (view === 'hoy') renderHoy();
+  window.scrollTo(0, 0);
+}
+
+// ============ INIT ============
+renderHoy();
+</script>
+</body>
+</html>
