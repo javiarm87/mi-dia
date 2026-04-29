@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -180,6 +181,29 @@
     text-transform: uppercase;
     letter-spacing: 0.3px;
     border-bottom: 0.5px solid var(--separator);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .day-emoji { font-size: 18px; }
+  .ingredients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+  }
+  .ing {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    background: #F2F2F7;
+    color: var(--text-2);
+    font-weight: 500;
+  }
+  .ing.missing {
+    background: #FFE5E5;
+    color: var(--red);
+    font-weight: 700;
   }
   .opt {
     padding: 14px 16px;
@@ -227,14 +251,39 @@
     aspect-ratio: 1;
     border-radius: 4px;
     background: var(--separator);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(0,0,0,0.55);
+    position: relative;
+    padding: 1px;
+    gap: 0;
+    line-height: 1.1;
   }
-  .hm-day.l1 { background: #C8F0D2; }
-  .hm-day.l2 { background: #80D896; }
-  .hm-day.l3 { background: #4CC267; }
-  .hm-day.l4 { background: var(--green); }
+  .hm-day.l0 { background: #FF3B30; color: white; }
+  .hm-day.l1 { background: #FF8C42; color: white; }
+  .hm-day.l2 { background: #FFCC00; color: #5C3F00; }
+  .hm-day.l3 { background: #8FD143; color: #2D4A00; }
+  .hm-day.l4 { background: #34C759; color: white; }
+  .hm-day .num { font-size: 13px; line-height: 1; font-weight: 700; }
+  .hm-day .food-icon { font-size: 12px; line-height: 1; margin-top: 1px; }
+  .hm-day .star-icon {
+    position: absolute;
+    top: -4px;
+    right: -3px;
+    font-size: 11px;
+    color: #FFD700;
+    text-shadow: 0 0 3px rgba(0,0,0,0.5);
+    z-index: 2;
+    line-height: 1;
+  }
   .hm-legend {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
     font-size: 11px;
     color: var(--text-2);
@@ -361,6 +410,7 @@
       <button class="chip active" onclick="filterMenu('A', this)">Opción A</button>
       <button class="chip" onclick="filterMenu('B', this)">Opción B</button>
       <button class="chip" onclick="filterMenu('viandas', this)">Viandas Maite</button>
+      <button class="chip" onclick="filterMenu('recetas', this)">Recetas</button>
     </div>
     <div id="menu-content"></div>
   </div>
@@ -384,24 +434,23 @@
   <div class="view" id="view-stats">
     <div class="header">
       <h1>Estadísticas</h1>
-      <div class="date" id="stats-month"></div>
+      <div class="date">Últimos 5 días</div>
     </div>
     <div class="stat-grid" id="stat-grid"></div>
     <div class="heatmap">
       <div class="hm-title">Cumplimiento últimos 35 días</div>
       <div class="hm-grid" id="heatmap"></div>
       <div class="hm-legend">
-        <span>Menos</span>
-        <span class="hm-leg" style="background:var(--separator)"></span>
-        <span class="hm-leg l1"></span>
-        <span class="hm-leg l2"></span>
-        <span class="hm-leg l3"></span>
-        <span class="hm-leg l4"></span>
-        <span>Más</span>
+        <span>Mal</span>
+        <span class="hm-leg" style="background:#FF3B30"></span>
+        <span class="hm-leg" style="background:#FF8C42"></span>
+        <span class="hm-leg" style="background:#FFCC00"></span>
+        <span class="hm-leg" style="background:#8FD143"></span>
+        <span class="hm-leg" style="background:#34C759"></span>
+        <span>Bien</span>
+        <span style="margin-left:8px">🥬 comió bien · 🍕 mal · ★ 5/5</span>
       </div>
     </div>
-    <div class="card-title">Rachas actuales</div>
-    <div class="card" id="streaks-card"></div>
   </div>
 
 </div>
@@ -439,18 +488,28 @@ const HABITS = [
 
 const MENU = {
   A: [
-    { dia: 'Lunes', plato: 'Merluza al horno con papas, cebolla y morrón + ensalada verde' },
-    { dia: 'Martes', plato: 'Guiso mixto (lentejas + porotos) con calabaza, zanahoria y choclo' },
-    { dia: 'Miércoles', plato: 'Pollo al horno con batata + coliflor asado con ajo y parmesano' },
-    { dia: 'Jueves', plato: 'Tarta de acelga y queso + ensalada de zanahoria y huevo duro' },
-    { dia: 'Viernes', plato: 'Salmón a la plancha + quinoa con hongos + brócoli salteado' },
+    { dia: 'Lunes', plato: 'Merluza al horno con papas, cebolla y morrón + ensalada verde',
+      ingredientes: ['Merluza filet', 'Papas', 'Cebolla', 'Morrón', 'Lechuga'] },
+    { dia: 'Martes', plato: 'Guiso mixto (lentejas + porotos) con calabaza, zanahoria y choclo',
+      ingredientes: ['Lentejas', 'Porotos colorados', 'Calabaza', 'Zanahoria', 'Choclo lata'] },
+    { dia: 'Miércoles', plato: 'Pollo al horno con batata + coliflor asado con ajo y parmesano',
+      ingredientes: ['Pechuga de pollo', 'Batata', 'Coliflor', 'Queso rallado'] },
+    { dia: 'Jueves', plato: 'Tarta de acelga y queso + ensalada de zanahoria y huevo duro',
+      ingredientes: ['Acelga', 'Queso rallado', 'Ricota', 'Zanahoria', 'Huevos', 'Lechuga'] },
+    { dia: 'Viernes', plato: 'Salmón a la plancha + quinoa con hongos + brócoli salteado',
+      ingredientes: ['Salmón filet', 'Quinoa', 'Hongos frescos', 'Brócoli'] },
   ],
   B: [
-    { dia: 'Lunes', plato: 'Wok de pollo con morrón, brócoli y cebolla + arroz integral' },
-    { dia: 'Martes', plato: 'Risotto de hongos con parmesano + ensalada rúcula y tomate' },
-    { dia: 'Miércoles', plato: 'Pastel de calabaza y osobuco + ensalada' },
-    { dia: 'Jueves', plato: 'Milanesas de berenjena al horno con puré mixto' },
-    { dia: 'Viernes', plato: 'Canelones de acelga y ricota + ensalada verde' },
+    { dia: 'Lunes', plato: 'Wok de pollo con morrón, brócoli y cebolla + arroz integral',
+      ingredientes: ['Pechuga de pollo', 'Morrón', 'Brócoli', 'Cebolla', 'Arroz integral'] },
+    { dia: 'Martes', plato: 'Risotto de hongos con parmesano + ensalada rúcula y tomate',
+      ingredientes: ['Arroz integral', 'Hongos frescos', 'Queso rallado', 'Rúcula', 'Tomate'] },
+    { dia: 'Miércoles', plato: 'Pastel de calabaza y osobuco + ensalada',
+      ingredientes: ['Calabaza', 'Osobuco', 'Lechuga'] },
+    { dia: 'Jueves', plato: 'Milanesas de berenjena al horno con puré mixto',
+      ingredientes: ['Berenjenas', 'Huevos', 'Pan lactal int.', 'Papas', 'Calabaza'] },
+    { dia: 'Viernes', plato: 'Canelones de acelga y ricota + ensalada verde',
+      ingredientes: ['Masa canelones', 'Acelga', 'Ricota', 'Lechuga'] },
   ],
   viandas: [
     { dia: 'Lunes', desayuno: 'Hummus + bastones zanahoria/pepino', merienda: 'Muffin banana + manzana' },
@@ -461,19 +520,59 @@ const MENU = {
   ]
 };
 
+const RECETAS = [
+  {
+    nombre: 'Hummus',
+    ingredientes: 'Garbanzos 400g cocidos · Tahini 3 cdas · Limón 2 · Ajo 2 dientes · Comino 1 cdita · Sal · Aceite oliva',
+    preparacion: 'Procesá garbanzos + tahini + jugo limón + ajo + comino + sal. Agregá agua de a poco hasta cremoso. Servir con aceite oliva encima. Dura 5 días en heladera.'
+  },
+  {
+    nombre: 'Chipá',
+    ingredientes: 'Almidón de mandioca 500g · Queso rallado 300g · Huevos 3 · Manteca 100g derretida · Leche 150ml · Sal 1 cdita',
+    preparacion: 'Mezclar almidón + queso + sal. Batir huevos + manteca + leche, incorporar a secos. Formar bolitas, hornear 180°C 20-25 min hasta dorados. Congelar sobras.'
+  },
+  {
+    nombre: 'Muffins de Banana',
+    ingredientes: 'Bananas maduras 3 pisadas · Huevo 1 · Aceite 80ml · Azúcar 100g · Harina integral 200g · Polvo hornear 2 cditas · Canela 1 cdita',
+    preparacion: 'Mezclar banana + huevo + aceite + azúcar. Incorporar harina + polvo + canela. Rellenar moldes 3/4, hornear 180°C 20 min. Duran 3 días.'
+  },
+  {
+    nombre: 'Muffins de Zanahoria',
+    ingredientes: 'Zanahoria rallada 200g · Huevo 1 · Aceite 80ml · Azúcar 80g · Harina integral 180g · Polvo hornear 2 cditas · Canela 1 cdita · Nuez moscada pizca',
+    preparacion: 'Mezclar zanahoria + huevo + aceite + azúcar. Incorporar harina + polvo + especias. Rellenar moldes 3/4, hornear 180°C 22 min. Duran 3 días.'
+  },
+  {
+    nombre: 'Scones Integrales',
+    ingredientes: 'Harina integral 300g · Polvo hornear 3 cditas · Sal pizca · Manteca fría 60g · Miel 2 cdas · Leche 150ml',
+    preparacion: 'Mezclar harina + polvo + sal. Incorporar manteca con manos hasta arenoso. Agregar miel + leche, unir sin amasar. Estirar 2cm, cortar círculos, hornear 200°C 15 min. Duran 2 días.'
+  },
+  {
+    nombre: 'Barritas Caseras (avena+miel+banana)',
+    ingredientes: 'Avena 200g · Bananas maduras 2 pisadas · Miel 3 cdas · Aceite 2 cdas · Canela 1 cdita · Sal pizca',
+    preparacion: 'Mezclar todo. Volcar en molde engrasado, aplastar bien. Hornear 170°C 25 min hasta dorado. Enfriar completo antes de cortar. Duran 5 días.'
+  },
+  {
+    nombre: 'Galletitas Avena-Banana',
+    ingredientes: 'Avena 150g · Banana madura 1 pisada · Miel 2 cdas · Canela 1 cdita',
+    preparacion: 'Mezclar todo. Formar bolitas, aplastar en bandeja. Hornear 180°C 12-15 min. Duran 5 días en tupper.'
+  }
+];
+
 const COMPRAS = {
   mensual: [
     { cat: 'Despensa', items: [
       ['Arroz integral', '2 kg'], ['Quinoa', '1 kg'], ['Lentejas', '1 kg'],
       ['Porotos colorados', '1 kg'], ['Garbanzos', '2 kg'], ['Masa canelones', '2 paq.'],
       ['Harina integral', '1 kg'], ['Harina común', '1 kg'], ['Avena', '1 kg'],
-      ['Polvo hornear', '1 paq.'], ['Tomate triturado', '6 latas'], ['Choclo lata', '4 latas']
+      ['Polvo hornear', '1 paq.'], ['Tomate triturado', '6 latas'], ['Choclo lata', '4 latas'],
+      ['Almidón de mandioca', '500 g'], ['Azúcar', '500 g']
     ]},
     { cat: 'Aceites/Especias', items: [
       ['Aceite oliva', '750 ml'], ['Aceite girasol', '1.5 L'], ['Vinagre', '500 ml'],
       ['Sal', '1 kg'], ['Pimienta', '100 g'], ['Ajo polvo', '1 frasco'],
       ['Comino', '1 frasco'], ['Pimentón', '1 frasco'], ['Orégano', '1 frasco'],
-      ['Miel', '500 g'], ['Tahini', '500 g']
+      ['Miel', '500 g'], ['Tahini', '500 g'], ['Canela', '1 frasco'],
+      ['Nuez moscada', '1 frasco']
     ]},
     { cat: 'Carnes para congelar', items: [
       ['Pechuga de pollo', '4 kg (8×500g)'], ['Merluza filet', '3 kg (7×400g)'],
@@ -482,36 +581,33 @@ const COMPRAS = {
   ],
   semanaA: [
     { cat: 'Verduras', items: [
-      ['Papas', '2 kg'], ['Batata', '1 kg'], ['Calabaza', '1'], ['Coliflor', '1'],
-      ['Acelga', '2 atados'], ['Lechuga', '2'], ['Zanahoria', '1.5 kg'], ['Pepino', '4'],
-      ['Zapallitos', '6'], ['Cebolla', '1 kg'], ['Morrón', '4'], ['Brócoli', '2'],
-      ['Palta', '2'], ['Hongos frescos', '400 g']
+      ['Papas', '1.5 kg'], ['Batata', '500 g'], ['Calabaza', '1'], ['Coliflor', '1'],
+      ['Acelga', '1 atado'], ['Lechuga', '1'], ['Zanahoria', '1 kg'], ['Pepino', '2'],
+      ['Cebolla', '1 kg'], ['Morrón', '2'], ['Brócoli', '1'], ['Hongos frescos', '200 g']
     ]},
     { cat: 'Frutas', items: [
-      ['Limones', '6'], ['Bananas', '1.5 kg'], ['Manzanas', '1.5 kg'],
-      ['Mandarinas', '1 kg'], ['Peras', '1 kg'], ['Uvas', '500 g']
+      ['Limones', '2'], ['Bananas', '1 kg'], ['Manzanas', '1 kg'],
+      ['Mandarinas', '500 g'], ['Uvas', '300 g']
     ]},
-    { cat: 'Lácteos/Pan', items: [
-      ['Huevos', '30'], ['Leche', '4 L'], ['Queso rallado', '300 g'],
-      ['Ricota', '500 g'], ['Manteca', '200 g'], ['Yogur natural', '1 kg'],
-      ['Pan lactal int.', '2 paq.'], ['Galletitas agua', '1 paq.']
+    { cat: 'Lácteos', items: [
+      ['Huevos', '12'], ['Leche', '2 L'], ['Queso rallado', '200 g'],
+      ['Ricota', '500 g'], ['Manteca', '200 g']
     ]}
   ],
   semanaB: [
     { cat: 'Verduras', items: [
-      ['Morrón', '4'], ['Brócoli', '2'], ['Cebolla', '1 kg'], ['Rúcula', '2 bolsas'],
-      ['Tomate', '1 kg'], ['Calabaza', '1'], ['Lechuga', '2'], ['Berenjenas', '4'],
-      ['Papas', '2 kg'], ['Zanahoria', '1.5 kg'], ['Acelga', '2 atados'],
-      ['Pepino', '4'], ['Zapallitos', '6'], ['Palta', '2'], ['Hongos frescos', '400 g']
+      ['Morrón', '2'], ['Brócoli', '1'], ['Cebolla', '1 kg'], ['Rúcula', '1 bolsa'],
+      ['Tomate', '500 g'], ['Calabaza', '1'], ['Lechuga', '1'], ['Berenjenas', '3'],
+      ['Papas', '1.5 kg'], ['Zanahoria', '1 kg'], ['Acelga', '1 atado'],
+      ['Pepino', '2'], ['Hongos frescos', '300 g']
     ]},
     { cat: 'Frutas', items: [
-      ['Limones', '6'], ['Bananas', '1.5 kg'], ['Manzanas', '1.5 kg'],
-      ['Mandarinas', '1 kg'], ['Peras', '1 kg'], ['Uvas', '500 g']
+      ['Limones', '2'], ['Bananas', '1 kg'], ['Manzanas', '1 kg'],
+      ['Mandarinas', '500 g'], ['Uvas', '300 g']
     ]},
     { cat: 'Lácteos/Pan', items: [
-      ['Huevos', '30'], ['Leche', '4 L'], ['Queso rallado', '400 g'],
-      ['Ricota', '500 g'], ['Manteca', '200 g'], ['Yogur natural', '1 kg'],
-      ['Pan lactal int.', '2 paq.'], ['Galletitas agua', '1 paq.']
+      ['Huevos', '12'], ['Leche', '2 L'], ['Queso rallado', '200 g'],
+      ['Ricota', '500 g'], ['Manteca', '200 g'], ['Pan lactal int.', '1 paq.']
     ]}
   ]
 };
@@ -603,23 +699,76 @@ function changeDate(delta) {
   renderHoy();
 }
 
+function getWeekDates() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dow = today.getDay(); // 0 = Dom, 1 = Lun
+  const offset = dow === 0 ? -6 : 1 - dow;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + offset);
+  const dates = {};
+  ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].forEach((dia, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates[dia] = d;
+  });
+  return dates;
+}
+
+function foodEmoji(date) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (date > today) return '';
+  const day = getDay(date);
+  if (day.food === 'good') return '🥬';
+  if (day.food === 'bad') return '🍕';
+  return '';
+}
+
+function isIngredientChecked(ingredient, weekScope) {
+  const compras = getCompras();
+  // Buscar primero en mensual
+  const inMensual = COMPRAS.mensual.some(g => g.items.some(([n]) => n === ingredient));
+  if (inMensual) return !!compras[`mensual-${ingredient}`];
+  // Si no, buscar en la semana actual del menu (A o B)
+  const semanaKey = weekScope === 'A' ? 'semanaA' : 'semanaB';
+  const inSemana = COMPRAS[semanaKey].some(g => g.items.some(([n]) => n === ingredient));
+  if (inSemana) return !!compras[`${semanaKey}-${ingredient}`];
+  return false;
+}
+
 function renderMenu() {
   const c = document.getElementById('menu-content');
-  if (currentMenu === 'viandas') {
+  if (currentMenu === 'recetas') {
+    c.innerHTML = RECETAS.map(r => `
+      <div class="recipe">
+        <h3>${r.nombre}</h3>
+        <p><span class="label">Ingredientes:</span> ${r.ingredientes}</p>
+        <p><span class="label">Preparación:</span> ${r.preparacion}</p>
+      </div>
+    `).join('');
+  } else if (currentMenu === 'viandas') {
     c.innerHTML = MENU.viandas.map(d => `
       <div class="day-card">
-        <div class="day-header">${d.dia}</div>
+        <div class="day-header"><span>${d.dia}</span></div>
         <div class="opt"><div class="opt-label">DESAYUNO</div><div class="opt-text">${d.desayuno}</div></div>
         <div class="opt"><div class="opt-label">MERIENDA</div><div class="opt-text">${d.merienda}</div></div>
       </div>
     `).join('');
   } else {
-    c.innerHTML = MENU[currentMenu].map(d => `
-      <div class="day-card">
-        <div class="day-header">${d.dia}</div>
-        <div class="opt"><div class="opt-text">${d.plato}</div></div>
-      </div>
-    `).join('');
+    c.innerHTML = MENU[currentMenu].map(d => {
+      const chips = (d.ingredientes || []).map(ing => {
+        const have = isIngredientChecked(ing, currentMenu);
+        return `<span class="ing ${have ? '' : 'missing'}">${ing}</span>`;
+      }).join('');
+      return `
+        <div class="day-card">
+          <div class="day-header"><span>${d.dia}</span></div>
+          <div class="opt">
+            <div class="opt-text">${d.plato}</div>
+            <div class="ingredients">${chips}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 }
 
@@ -683,93 +832,92 @@ function resetCompras() {
 function renderStats() {
   const data = getTracker();
   const now = new Date();
-  document.getElementById('stats-month').textContent = now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  const today0 = new Date(now); today0.setHours(0,0,0,0);
 
-  // % cumplimiento mes actual
-  const monthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const today = now.getDate();
-
-  const stats = HABITS.map(h => {
-    let count = 0;
-    for (let i = 1; i <= today; i++) {
-      const k = `${monthKey}-${String(i).padStart(2,'0')}`;
-      if (data[k] && data[k][h.id]) count++;
-    }
-    return { ...h, count, pct: today ? Math.round(count/today*100) : 0 };
-  });
-
-  // Foods
-  let goodFood = 0, badFood = 0;
-  for (let i = 1; i <= today; i++) {
-    const k = `${monthKey}-${String(i).padStart(2,'0')}`;
-    if (data[k]?.food === 'good') goodFood++;
-    if (data[k]?.food === 'bad') badFood++;
+  // Función helper: color según X/5 (igual que heatmap)
+  function colorClass(x) {
+    const score = x * 20; // 0,20,40,60,80,100
+    if (score === 0)         return { bg: '#F2F2F7', fg: '#8E8E93' };
+    if (score < 20)          return { bg: '#FF3B30', fg: 'white' };
+    if (score < 40)          return { bg: '#FF8C42', fg: 'white' };
+    if (score < 60)          return { bg: '#FFCC00', fg: '#5C3F00' };
+    if (score < 80)          return { bg: '#8FD143', fg: '#2D4A00' };
+    return { bg: '#34C759', fg: 'white' };
   }
 
-  const grid = document.getElementById('stat-grid');
-  grid.innerHTML = stats.map(s => `
-    <div class="stat">
-      <div class="stat-label">${s.icon} ${s.label}</div>
-      <div class="stat-value" style="color:${s.color}">${s.pct}%</div>
-      <div class="stat-sub">${s.count}/${today} días</div>
-    </div>
-  `).join('') + `
-    <div class="stat">
-      <div class="stat-label">🍽 Comida bien</div>
-      <div class="stat-value" style="color:var(--green)">${goodFood}</div>
-      <div class="stat-sub">${badFood} mal · ${today - goodFood - badFood} sin registrar</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">📅 Día del mes</div>
-      <div class="stat-value">${today}/${daysInMonth}</div>
-      <div class="stat-sub">${daysInMonth - today} días restantes</div>
-    </div>
-  `;
+  // Contar últimos 5 días (incluye hoy)
+  const last5 = [];
+  for (let i = 4; i >= 0; i--) {
+    const d = new Date(today0);
+    d.setDate(d.getDate() - i);
+    last5.push(data[dateKey(d)] || {});
+  }
 
+  const stats = HABITS.map(h => {
+    const count = last5.filter(d => d[h.id]).length;
+    return { ...h, count };
+  });
+  const goodFoodCount = last5.filter(d => d.food === 'good').length;
+
+  const grid = document.getElementById('stat-grid');
+  const allStats = [
+    ...stats,
+    { icon: '🥬', label: 'Comida bien', count: goodFoodCount }
+  ];
+
+  grid.innerHTML = allStats.map(s => {
+    const c = colorClass(s.count);
+    return `
+      <div class="stat" style="background:${c.bg};color:${c.fg}">
+        <div class="stat-label" style="color:${c.fg};opacity:0.85">${s.icon} ${s.label}</div>
+        <div class="stat-value" style="color:${c.fg}">${s.count}/5</div>
+        <div class="stat-sub" style="color:${c.fg};opacity:0.75">últimos 5 días</div>
+      </div>
+    `;
+  }).join('');
   // Heatmap últimos 35 días
   const hm = document.getElementById('heatmap');
+  // Pesos: comida 50%, ejercicio 30%, pasos 10%, creatina 7%, pastillas 3%
+  const W = { food: 50, ejercicio: 30, pasos: 10, creatina: 7, pastillas: 3 };
   let hmHtml = '';
   for (let i = 34; i >= 0; i--) {
-    const d = new Date(now);
+    const d = new Date(today0);
     d.setDate(d.getDate() - i);
     const k = dateKey(d);
     const day = data[k] || {};
+
+    // Día futuro: gris vacío
+    if (d > today0) {
+      hmHtml += `<div class="hm-day"></div>`;
+      continue;
+    }
+
+    // Contar cumplidos y peso ponderado (0 a 100)
     let count = 0;
-    HABITS.forEach(h => { if (day[h.id]) count++; });
-    if (day.food === 'good') count++;
-    const total = HABITS.length + 1;
-    let lvl = '';
-    if (count > 0 && count <= total*0.25) lvl = 'l1';
-    else if (count <= total*0.5) lvl = 'l2';
-    else if (count <= total*0.75) lvl = 'l3';
-    else if (count > total*0.75) lvl = 'l4';
-    hmHtml += `<div class="hm-day ${lvl}" title="${k}: ${count}/${total}"></div>`;
+    let score = 0;
+    if (day.ejercicio) { count++; score += W.ejercicio; }
+    if (day.pastillas) { count++; score += W.pastillas; }
+    if (day.creatina)  { count++; score += W.creatina; }
+    if (day.pasos)     { count++; score += W.pasos; }
+    if (day.food === 'good') { count++; score += W.food; }
+
+    // Gradient gris → rojo → amarillo → verde (escalones de 20)
+    let cls;
+    if (score === 0)         cls = '';     // gris
+    else if (score < 20)     cls = 'l0';   // rojo intenso
+    else if (score < 40)     cls = 'l1';   // rojo-naranja
+    else if (score < 60)     cls = 'l2';   // amarillo
+    else if (score < 80)     cls = 'l3';   // verde-amarillo
+    else                     cls = 'l4';   // verde fuerte
+
+    const star = count === 5 ? '<span class="star-icon">★</span>' : '';
+    const fEmoji = day.food === 'good' ? '🥬' : day.food === 'bad' ? '🍕' : '';
+    const num = count > 0 ? `<span class="num">${count}</span>` : '';
+    const fIcon = fEmoji ? `<span class="food-icon">${fEmoji}</span>` : '';
+
+    hmHtml += `<div class="hm-day ${cls}" title="${k}: ${count}/5 (${score} pts)">${num}${fIcon}${star}</div>`;
   }
   hm.innerHTML = hmHtml;
-
-  // Rachas
-  const streaks = HABITS.map(h => {
-    let streak = 0;
-    let d = new Date(now);
-    while (true) {
-      const k = dateKey(d);
-      if (data[k]?.[h.id]) { streak++; d.setDate(d.getDate()-1); }
-      else break;
-    }
-    return { ...h, streak };
-  });
-  document.getElementById('streaks-card').innerHTML = streaks.map(s => `
-    <div class="row">
-      <div class="row-left">
-        <div class="row-icon" style="background:${s.bg};color:${s.color}">${s.icon}</div>
-        <div class="row-text">${s.label}</div>
-      </div>
-      <div style="font-size:17px;font-weight:600;color:${s.streak > 0 ? s.color : 'var(--text-2)'}">
-        ${s.streak} ${s.streak === 1 ? 'día' : 'días'} 🔥
-      </div>
-    </div>
-  `).join('');
 }
 
 // ============ NAVIGATION ============
