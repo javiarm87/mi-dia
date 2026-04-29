@@ -364,6 +364,87 @@
   .recipe .label { font-weight: 600; color: var(--text); }
 
   .empty { text-align: center; color: var(--text-2); padding: 40px 20px; font-size: 15px; }
+
+  /* Modal del día */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+  }
+  .modal-backdrop.active { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 360px;
+    overflow: hidden;
+    animation: modalIn 0.2s ease-out;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 12px;
+    border-bottom: 0.5px solid var(--separator);
+  }
+  .modal-title {
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .modal-close {
+    border: none;
+    background: var(--separator);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-body { padding: 8px 0; }
+  .modal-row {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 0.5px solid var(--separator);
+  }
+  .modal-row:last-child { border-bottom: none; }
+  .modal-row-left {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-row-icon {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .modal-status { font-size: 18px; }
+  .modal-summary {
+    background: var(--bg);
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .modal-summary strong { color: var(--text); font-size: 15px; }
+
+  .hm-day { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -436,7 +517,6 @@
       <h1>Estadísticas</h1>
       <div class="date">Últimos 5 días</div>
     </div>
-    <div class="stat-grid" id="stat-grid"></div>
     <div class="heatmap">
       <div class="hm-title">Cumplimiento últimos 35 días</div>
       <div class="hm-grid" id="heatmap"></div>
@@ -450,6 +530,18 @@
         <span>Bien</span>
         <span style="margin-left:8px">🥬 comió bien · 🍕 mal · ★ 5/5</span>
       </div>
+    </div>
+    <div class="stat-grid" id="stat-grid"></div>
+  </div>
+
+  <!-- Day detail modal -->
+  <div class="modal-backdrop" id="day-modal" onclick="closeDayModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title" id="day-modal-title"></div>
+        <button class="modal-close" onclick="closeDayModal()">✕</button>
+      </div>
+      <div class="modal-body" id="day-modal-body"></div>
     </div>
   </div>
 
@@ -725,14 +817,7 @@ function foodEmoji(date) {
 
 function isIngredientChecked(ingredient, weekScope) {
   const compras = getCompras();
-  // Buscar primero en mensual
-  const inMensual = COMPRAS.mensual.some(g => g.items.some(([n]) => n === ingredient));
-  if (inMensual) return !!compras[`mensual-${ingredient}`];
-  // Si no, buscar en la semana actual del menu (A o B)
-  const semanaKey = weekScope === 'A' ? 'semanaA' : 'semanaB';
-  const inSemana = COMPRAS[semanaKey].some(g => g.items.some(([n]) => n === ingredient));
-  if (inSemana) return !!compras[`${semanaKey}-${ingredient}`];
-  return false;
+  return !!compras[ingredient];
 }
 
 function renderMenu() {
@@ -786,11 +871,11 @@ function renderCompras() {
   c.innerHTML = COMPRAS[currentCompras].map(g => {
     return `<div class="card-title">${g.cat}</div><div class="card">` +
       g.items.map(([nombre, cant]) => {
-        const id = `${currentCompras}-${nombre}`;
+        const id = nombre; // key compartida (sin prefijo de scope)
         const checked = !!compras[id];
         total++; if (checked) done++;
         return `
-          <div class="row" onclick="toggleCompra('${id}')">
+          <div class="row" onclick="toggleCompra('${id.replace(/'/g, "\\'")}')">
             <div class="row-left">
               <div class="row-text ${checked ? 'checked' : ''}">${nombre}</div>
             </div>
@@ -819,10 +904,14 @@ function filterCompras(opt, btn) {
 }
 
 function resetCompras() {
-  if (confirm('¿Desmarcar todos los items de esta lista?')) {
+  const labels = { mensual: 'Mensuales', semanaA: 'Semana A', semanaB: 'Semana B' };
+  if (confirm(`¿Desmarcar todos los items de "${labels[currentCompras]}"?`)) {
     const compras = getCompras();
-    Object.keys(compras).forEach(k => {
-      if (k.startsWith(currentCompras + '-')) delete compras[k];
+    // Sólo desmarca los items presentes en la lista activa (otros scope quedan intactos)
+    COMPRAS[currentCompras].forEach(g => {
+      g.items.forEach(([nombre]) => {
+        delete compras[nombre];
+      });
     });
     localStorage.setItem('compras', JSON.stringify(compras));
     renderCompras();
@@ -886,9 +975,9 @@ function renderStats() {
     const k = dateKey(d);
     const day = data[k] || {};
 
-    // Día futuro: gris vacío
+    // Día futuro: gris vacío (no clickeable)
     if (d > today0) {
-      hmHtml += `<div class="hm-day"></div>`;
+      hmHtml += `<div class="hm-day" style="cursor:default"></div>`;
       continue;
     }
 
@@ -915,9 +1004,69 @@ function renderStats() {
     const num = count > 0 ? `<span class="num">${count}</span>` : '';
     const fIcon = fEmoji ? `<span class="food-icon">${fEmoji}</span>` : '';
 
-    hmHtml += `<div class="hm-day ${cls}" title="${k}: ${count}/5 (${score} pts)">${num}${fIcon}${star}</div>`;
+    hmHtml += `<div class="hm-day ${cls}" onclick="showDayDetail('${k}')" title="${k}: ${count}/5 (${score} pts)">${num}${fIcon}${star}</div>`;
   }
   hm.innerHTML = hmHtml;
+}
+
+function showDayDetail(dateKey) {
+  const data = getTracker();
+  const day = data[dateKey] || {};
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  const formatted = dateObj.toLocaleDateString('es-AR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  // Score
+  const W = { food: 50, ejercicio: 30, pasos: 10, creatina: 7, pastillas: 3 };
+  let count = 0, score = 0;
+  if (day.ejercicio) { count++; score += W.ejercicio; }
+  if (day.pastillas) { count++; score += W.pastillas; }
+  if (day.creatina)  { count++; score += W.creatina; }
+  if (day.pasos)     { count++; score += W.pasos; }
+  if (day.food === 'good') { count++; score += W.food; }
+
+  document.getElementById('day-modal-title').textContent =
+    formatted.charAt(0).toUpperCase() + formatted.slice(1);
+
+  const rows = HABITS.map(h => `
+    <div class="modal-row">
+      <div class="modal-row-left">
+        <div class="modal-row-icon" style="background:${h.bg};color:${h.color}">${h.icon}</div>
+        <div>${h.label}</div>
+      </div>
+      <div class="modal-status">${day[h.id] ? '✅' : '⬜️'}</div>
+    </div>
+  `).join('');
+
+  const foodIcon = day.food === 'good' ? '🥬' :
+                   day.food === 'bad'  ? '🍕' : '⬜️';
+  const foodLabel = day.food === 'good' ? 'Bien' :
+                    day.food === 'bad'  ? 'Mal' : 'Sin registrar';
+
+  const foodRow = `
+    <div class="modal-row">
+      <div class="modal-row-left">
+        <div class="modal-row-icon" style="background:#FFE5E5;color:var(--red)">🍽</div>
+        <div>Comida</div>
+      </div>
+      <div class="modal-status">${foodIcon} <span style="font-size:14px;color:var(--text-2);margin-left:4px">${foodLabel}</span></div>
+    </div>
+  `;
+
+  document.getElementById('day-modal-body').innerHTML =
+    rows + foodRow +
+    `<div class="modal-summary">Cumplimiento: <strong>${count}/5</strong> · <strong>${score} pts</strong></div>`;
+
+  document.getElementById('day-modal').classList.add('active');
+}
+
+function closeDayModal(event) {
+  if (event && event.target.id !== 'day-modal' && !event.target.classList.contains('modal-close')) {
+    if (event.currentTarget !== event.target) return;
+  }
+  document.getElementById('day-modal').classList.remove('active');
 }
 
 // ============ NAVIGATION ============
@@ -934,6 +1083,24 @@ function showView(view, btn) {
 }
 
 // ============ INIT ============
+// Migración: keys viejas con prefijo (mensual-X, semanaA-X, semanaB-X) → solo X
+(function migrateCompras() {
+  const compras = getCompras();
+  let changed = false;
+  Object.keys(compras).forEach(k => {
+    const m = k.match(/^(mensual|semanaA|semanaB)-(.+)$/);
+    if (m && compras[k]) {
+      compras[m[2]] = true;
+      delete compras[k];
+      changed = true;
+    } else if (m) {
+      delete compras[k];
+      changed = true;
+    }
+  });
+  if (changed) localStorage.setItem('compras', JSON.stringify(compras));
+})();
+
 renderHoy();
 </script>
 </body>
