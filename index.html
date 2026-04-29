@@ -990,9 +990,12 @@ function renderStats() {
     if (day.pasos)     { count++; score += W.pasos; }
     if (day.food === 'good') { count++; score += W.food; }
 
+    // ¿Hay al menos una selección hecha?
+    const hasAnySelection = count > 0 || day.food === 'bad';
+
     // Gradient gris → rojo → amarillo → verde (escalones de 20)
     let cls;
-    if (score === 0)         cls = '';     // gris
+    if (!hasAnySelection)    cls = '';     // gris (nada registrado)
     else if (score < 20)     cls = 'l0';   // rojo intenso
     else if (score < 40)     cls = 'l1';   // rojo-naranja
     else if (score < 60)     cls = 'l2';   // amarillo
