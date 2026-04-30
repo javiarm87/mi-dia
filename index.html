@@ -366,6 +366,15 @@
     flex-shrink: 0;
   }
   .chip.active { background: var(--blue); color: white; }
+  .missing-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    padding: 8px 14px;
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
 
   /* Buttons */
   .reset-btn {
@@ -645,17 +654,14 @@
       <button class="chip" onclick="filterCompras('semanaA', this)">Opción A</button>
       <button class="chip" onclick="filterCompras('semanaB', this)">Opción B</button>
       <button class="chip" onclick="filterCompras('todos', this)">Todos</button>
-      <button class="chip" onclick="filterCompras('faltantes', this)">Faltantes</button>
     </div>
-    <div style="padding: 0 16px 12px">
-      <label style="display:flex;align-items:center;justify-content:space-between;background:var(--card);padding:10px 14px;border-radius:12px">
-        <span style="font-size:14px">Mostrar solo lo que falta comprar</span>
-        <span class="switch">
-          <input type="checkbox" id="compras-only-missing" onchange="toggleOnlyMissing(this.checked)">
-          <span class="slider"></span>
-        </span>
-      </label>
-    </div>
+    <label class="missing-toggle">
+      <span style="font-size:14px;font-weight:500">Solo faltantes</span>
+      <span class="switch">
+        <input type="checkbox" id="compras-only-missing" onchange="toggleOnlyMissing(this.checked)">
+        <span class="slider"></span>
+      </span>
+    </label>
     <div id="compras-content"></div>
     <button class="reset-btn" onclick="resetCompras()">Desmarcar todo</button>
   </div>
@@ -772,7 +778,7 @@
     <div class="card" style="padding: 16px">
       <div style="margin-bottom:10px">
         <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Fecha</div>
-        <input type="date" id="weight-date" style="width:100%;padding:10px 12px;border:1px solid var(--separator);border-radius:8px;font-size:15px;background:var(--bg)">
+        <input type="date" id="weight-date" style="width:100%;padding:10px 12px;border:1px solid var(--separator);border-radius:8px;font-size:15px;background:var(--bg);text-align:center;-webkit-appearance:none;appearance:none;font-family:-apple-system,BlinkMacSystemFont,sans-serif">
       </div>
       <div style="margin-bottom:12px">
         <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Peso (kg)</div>
@@ -848,6 +854,35 @@
         <div style="padding: 12px 16px">
           <button class="secondary-btn" style="margin:0" onclick="addNewHabit()">+ Agregar hábito</button>
         </div>
+
+        <div class="settings-section" style="margin-top:8px">Sync con GitHub Gist</div>
+        <div style="padding: 8px 16px 4px">
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:8px;line-height:1.4">
+            Tus datos quedan en tu iPhone. Activá sync para hacer backup en un Gist privado de tu cuenta de GitHub.
+          </div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">GitHub Personal Access Token</div>
+            <input type="password" id="gist-token" placeholder="ghp_... o github_pat_..." style="width:100%;padding:10px 12px;border:1px solid var(--separator);border-radius:8px;font-size:14px;background:var(--bg);font-family:monospace">
+          </div>
+          <div style="margin-bottom:8px">
+            <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Gist ID (dejá vacío la primera vez)</div>
+            <input type="text" id="gist-id" placeholder="se genera al hacer Subir" style="width:100%;padding:10px 12px;border:1px solid var(--separator);border-radius:8px;font-size:14px;background:var(--bg);font-family:monospace">
+          </div>
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+            <span style="font-size:14px">Auto-sync (sube al guardar)</span>
+            <span class="switch">
+              <input type="checkbox" id="gist-autosync" onchange="toggleAutosync(this.checked)">
+              <span class="slider"></span>
+            </span>
+          </label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+            <button class="secondary-btn" style="margin:0" onclick="gistUpload()">⬆️ Subir</button>
+            <button class="secondary-btn" style="margin:0" onclick="gistDownload()">⬇️ Bajar</button>
+          </div>
+          <button class="secondary-btn" style="margin:8px 0 0;width:100%" onclick="saveGistConfig()">Guardar configuración</button>
+          <div id="gist-status" style="font-size:12px;margin-top:8px;text-align:center;color:var(--text-2);min-height:18px"></div>
+        </div>
+
         <div class="settings-section" style="margin-top:8px">Datos</div>
         <div style="padding: 12px 16px">
           <button class="secondary-btn" style="margin:0;color:var(--red)" onclick="resetAllData()">🗑 Borrar todos los datos</button>
@@ -937,11 +972,16 @@ const MENU = {
       ingredientes: ['Masa canelones', 'Acelga', 'Ricota', 'Lechuga'] },
   ],
   viandas: [
-    { dia: 'Lunes', desayuno: 'Hummus + bastones zanahoria/pepino', merienda: 'Muffin banana + manzana' },
-    { dia: 'Martes', desayuno: 'Chipá (3) + uvas', merienda: 'Hummus + bastones' },
-    { dia: 'Miércoles', desayuno: 'Muffin zanahoria + mandarina', merienda: 'Galletitas avena-banana + manzana' },
-    { dia: 'Jueves', desayuno: 'Hummus + bastones', merienda: 'Barrita casera + banana' },
-    { dia: 'Viernes', desayuno: 'Scones integrales + mandarina', merienda: 'Chipá + uvas' },
+    { dia: 'Lunes', desayuno: 'Hummus + bastones zanahoria/pepino', merienda: 'Muffin banana + manzana',
+      ingredientes: ['Garbanzos','Tahini','Limones','Zanahoria','Pepino','Bananas','Harina integral','Polvo hornear','Azúcar','Manzanas'] },
+    { dia: 'Martes', desayuno: 'Chipá (3) + uvas', merienda: 'Hummus + bastones zanahoria/pepino',
+      ingredientes: ['Almidón de mandioca','Queso rallado','Huevos','Manteca','Leche','Uvas','Garbanzos','Tahini','Limones','Zanahoria','Pepino'] },
+    { dia: 'Miércoles', desayuno: 'Muffin zanahoria + mandarina', merienda: 'Galletitas avena-banana + manzana',
+      ingredientes: ['Zanahoria','Harina integral','Polvo hornear','Azúcar','Mandarinas','Avena','Bananas','Miel','Manzanas'] },
+    { dia: 'Jueves', desayuno: 'Hummus + bastones zanahoria/pepino', merienda: 'Barrita casera + banana',
+      ingredientes: ['Garbanzos','Tahini','Limones','Zanahoria','Pepino','Avena','Miel','Bananas'] },
+    { dia: 'Viernes', desayuno: 'Scones integrales + mandarina', merienda: 'Chipá + uvas',
+      ingredientes: ['Harina integral','Polvo hornear','Manteca','Miel','Leche','Mandarinas','Almidón de mandioca','Queso rallado','Huevos','Uvas'] },
   ]
 };
 
@@ -1149,13 +1189,20 @@ function renderMenu() {
       </div>
     `).join('');
   } else if (currentMenu === 'viandas') {
-    c.innerHTML = MENU.viandas.map(d => `
-      <div class="day-card">
-        <div class="day-header"><span>${d.dia}</span></div>
-        <div class="opt"><div class="opt-label">DESAYUNO</div><div class="opt-text">${d.desayuno}</div></div>
-        <div class="opt"><div class="opt-label">MERIENDA</div><div class="opt-text">${d.merienda}</div></div>
-      </div>
-    `).join('');
+    c.innerHTML = MENU.viandas.map(d => {
+      const chips = (d.ingredientes || []).map(ing => {
+        const have = isIngredientChecked(ing);
+        return `<span class="ing ${have ? '' : 'missing'}">${ing}</span>`;
+      }).join('');
+      return `
+        <div class="day-card">
+          <div class="day-header"><span>${d.dia}</span></div>
+          <div class="opt"><div class="opt-label">DESAYUNO</div><div class="opt-text">${d.desayuno}</div></div>
+          <div class="opt"><div class="opt-label">MERIENDA</div><div class="opt-text">${d.merienda}</div></div>
+          ${chips ? `<div class="opt"><div class="ingredients">${chips}</div></div>` : ''}
+        </div>
+      `;
+    }).join('');
   } else {
     c.innerHTML = MENU[currentMenu].map(d => {
       const chips = (d.ingredientes || []).map(ing => {
@@ -1202,7 +1249,7 @@ function buildAllItems() {
 }
 
 function getComprasGroups() {
-  if (currentCompras === 'todos' || currentCompras === 'faltantes') {
+  if (currentCompras === 'todos') {
     return buildAllItems();
   }
   return COMPRAS[currentCompras];
@@ -1212,7 +1259,7 @@ function renderCompras() {
   const c = document.getElementById('compras-content');
   const compras = getCompras();
   const groups = getComprasGroups();
-  const showOnlyMissing = (currentCompras === 'faltantes') || onlyMissing;
+  const showOnlyMissing = onlyMissing;
   let total = 0, done = 0;
 
   let html = '';
@@ -1275,7 +1322,7 @@ function toggleOnlyMissing(val) {
 function resetCompras() {
   const labels = {
     mensual: 'Mensuales', semanaA: 'Opción A', semanaB: 'Opción B',
-    todos: 'Todos', faltantes: 'Faltantes'
+    todos: 'Todos'
   };
   if (confirm(`¿Desmarcar todos los items de "${labels[currentCompras]}"?`)) {
     const compras = getCompras();
@@ -1997,6 +2044,7 @@ function renderHoyCalendar() {
 // ============ SETTINGS ============
 function openSettings() {
   renderSettings();
+  loadGistConfigUI();
   document.getElementById('settings-modal').classList.add('active');
 }
 function closeSettings(event) {
@@ -2370,11 +2418,183 @@ function renderWeightHistory() {
         <div style="display:flex;align-items:center;gap:12px">
           ${diffLabel}
           <div class="row-detail" style="margin:0">${formatShortDate(w.date)}</div>
-          <button onclick="deleteWeight('${w.date}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:4px">✕</button>
+          <button onclick="event.stopPropagation();deleteWeight('${w.date}')" style="background:#FFE5E5;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:6px 10px;border-radius:8px;font-weight:600;line-height:1">🗑</button>
         </div>
       </div>
     `;
   }).join('');
+}
+
+// ============ GITHUB GIST SYNC ============
+function gistConfig() {
+  return {
+    token: localStorage.getItem('gistToken') || '',
+    id: localStorage.getItem('gistId') || '',
+    auto: localStorage.getItem('gistAutosync') === 'true'
+  };
+}
+
+function saveGistConfig() {
+  const token = document.getElementById('gist-token').value.trim();
+  const id = document.getElementById('gist-id').value.trim();
+  if (token) localStorage.setItem('gistToken', token);
+  if (id) localStorage.setItem('gistId', id);
+  setGistStatus('Configuración guardada', 'green');
+}
+
+function toggleAutosync(val) {
+  localStorage.setItem('gistAutosync', val ? 'true' : 'false');
+  setGistStatus(val ? 'Auto-sync activado' : 'Auto-sync desactivado', 'gray');
+}
+
+function setGistStatus(msg, type) {
+  const el = document.getElementById('gist-status');
+  if (!el) return;
+  const colors = { green: '#34C759', red: '#FF3B30', gray: '#8E8E93', blue: '#007AFF' };
+  el.textContent = msg;
+  el.style.color = colors[type] || '#8E8E93';
+  if (type === 'green' || type === 'blue') {
+    setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 4000);
+  }
+}
+
+function buildSnapshot() {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    tracker: getTracker(),
+    compras: getCompras(),
+    weights: getWeights(),
+    habits: getHabits(),
+    settings: {
+      detalleHabit: localStorage.getItem('detalleHabit'),
+      statsPeriod: localStorage.getItem('statsPeriod'),
+      statsSkipWeekends: localStorage.getItem('statsSkipWeekends'),
+    }
+  };
+}
+
+function applySnapshot(snap) {
+  if (!snap || typeof snap !== 'object') throw new Error('Snapshot inválido');
+  if (snap.tracker) localStorage.setItem('tracker', JSON.stringify(snap.tracker));
+  if (snap.compras) localStorage.setItem('compras', JSON.stringify(snap.compras));
+  if (snap.weights) localStorage.setItem('weights', JSON.stringify(snap.weights));
+  if (snap.habits) localStorage.setItem('habits', JSON.stringify(snap.habits));
+  if (snap.settings) {
+    Object.entries(snap.settings).forEach(([k, v]) => {
+      if (v !== null && v !== undefined) localStorage.setItem(k, v);
+    });
+  }
+}
+
+async function gistUpload(silent) {
+  const cfg = gistConfig();
+  if (!cfg.token) { setGistStatus('Falta el token. Pegalo y guardá.', 'red'); return; }
+  if (!silent) setGistStatus('Subiendo…', 'blue');
+  const snap = buildSnapshot();
+  const body = {
+    description: 'Mi Día - backup',
+    public: false,
+    files: { 'mi-dia.json': { content: JSON.stringify(snap, null, 2) } }
+  };
+  try {
+    let url = 'https://api.github.com/gists';
+    let method = 'POST';
+    if (cfg.id) {
+      url = `https://api.github.com/gists/${cfg.id}`;
+      method = 'PATCH';
+    }
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${cfg.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`HTTP ${res.status}: ${errText.slice(0, 100)}`);
+    }
+    const json = await res.json();
+    if (!cfg.id && json.id) {
+      localStorage.setItem('gistId', json.id);
+      const idInput = document.getElementById('gist-id');
+      if (idInput) idInput.value = json.id;
+    }
+    const time = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    if (!silent) setGistStatus(`✅ Backup OK (${time})`, 'green');
+    localStorage.setItem('lastGistUpload', new Date().toISOString());
+  } catch (e) {
+    if (!silent) setGistStatus(`❌ ${e.message}`, 'red');
+  }
+}
+
+async function gistDownload() {
+  const cfg = gistConfig();
+  if (!cfg.token) { setGistStatus('Falta el token', 'red'); return; }
+  if (!cfg.id) { setGistStatus('Falta el Gist ID', 'red'); return; }
+  if (!confirm('Esto va a REEMPLAZAR los datos locales con los del backup. ¿Continuar?')) return;
+  setGistStatus('Bajando…', 'blue');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${cfg.id}`, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${cfg.token}`
+      }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const file = json.files && json.files['mi-dia.json'];
+    if (!file) throw new Error('No encuentro mi-dia.json en el Gist');
+    const content = file.truncated
+      ? await (await fetch(file.raw_url)).text()
+      : file.content;
+    const snap = JSON.parse(content);
+    applySnapshot(snap);
+    setGistStatus('✅ Restaurado. Recargando…', 'green');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    setGistStatus(`❌ ${e.message}`, 'red');
+  }
+}
+
+function maybeAutoSync() {
+  const cfg = gistConfig();
+  if (cfg.auto && cfg.token) {
+    // Throttle: máximo 1 upload cada 30s
+    const last = parseInt(localStorage.getItem('_lastSyncAttempt') || '0', 10);
+    const now = Date.now();
+    if (now - last < 30000) return;
+    localStorage.setItem('_lastSyncAttempt', String(now));
+    gistUpload(true);
+  }
+}
+
+// Hook: cuando cambian datos, intentar auto-sync
+const _origSetItem = localStorage.setItem.bind(localStorage);
+localStorage.setItem = function(k, v) {
+  _origSetItem(k, v);
+  if (['tracker','compras','weights','habits'].includes(k)) {
+    maybeAutoSync();
+  }
+};
+
+// Cargar config en el modal cuando se abre
+function loadGistConfigUI() {
+  const cfg = gistConfig();
+  const tk = document.getElementById('gist-token');
+  const id = document.getElementById('gist-id');
+  const au = document.getElementById('gist-autosync');
+  if (tk) tk.value = cfg.token;
+  if (id) id.value = cfg.id;
+  if (au) au.checked = cfg.auto;
+  const last = localStorage.getItem('lastGistUpload');
+  if (last) {
+    const d = new Date(last);
+    setGistStatus(`Último backup: ${d.toLocaleString('es-AR')}`, 'gray');
+  }
 }
 
 // ============ INIT ============
