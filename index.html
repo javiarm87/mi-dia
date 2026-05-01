@@ -351,23 +351,29 @@
 
   /* Chips */
   .chips {
-    display: flex; gap: 8px;
-    padding: 0 16px 12px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    display: flex;
+    gap: 6px;
+    padding: 0 0 12px;
+    width: 100%;
   }
-  .chips::-webkit-scrollbar { display: none; }
   .chip {
     border: none;
     background: var(--card);
-    padding: 8px 14px; border-radius: 16px;
-    font-size: 14px; font-weight: 600;
+    padding: 8px 4px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--text);
     white-space: nowrap;
     cursor: pointer;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .chip.active { background: var(--blue); color: white; }
+  .chip.chip-auto { flex: 0 0 auto; padding: 8px 14px; }
   .missing-toggle {
     display: flex;
     align-items: center;
@@ -636,7 +642,7 @@
     <div class="chips">
       <button class="chip active" onclick="filterMenu('A', this)">Opción A</button>
       <button class="chip" onclick="filterMenu('B', this)">Opción B</button>
-      <button class="chip" onclick="filterMenu('viandas', this)">Viandas Maite</button>
+      <button class="chip" onclick="filterMenu('viandas', this)">Viandas</button>
       <button class="chip" onclick="filterMenu('recetas', this)">Recetas</button>
     </div>
     <div id="menu-content"></div>
@@ -784,7 +790,7 @@
       </div>
       <div style="margin-bottom:12px">
         <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Peso (kg)</div>
-        <input type="number" id="weight-value" step="0.01" min="0" placeholder="ej. 75.42" inputmode="decimal" style="width:100%;padding:10px 12px;border:1px solid var(--separator);border-radius:8px;font-size:15px;background:var(--bg)">
+        <input type="text" id="weight-value" inputmode="decimal" pattern="[0-9]+([\.,][0-9]+)?" placeholder="ej. 75,42" autocomplete="off" style="width:100%;padding:10px 12px;border:1px solid var(--separator);border-radius:8px;font-size:15px;background:var(--bg)">
       </div>
       <button class="primary-btn" onclick="addWeight()" style="width:100%">Guardar peso</button>
     </div>
@@ -796,11 +802,11 @@
     <div class="chart-card">
       <div class="chart-title">📈 Evolución de peso</div>
       <div class="chart-controls" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-        <button class="chip active" onclick="setWeightRange('all', this)">Todo</button>
-        <button class="chip" onclick="setWeightRange('1y', this)">1 año</button>
-        <button class="chip" onclick="setWeightRange('6m', this)">6 meses</button>
-        <button class="chip" onclick="setWeightRange('3m', this)">3 meses</button>
-        <button class="chip" onclick="setWeightRange('1m', this)">1 mes</button>
+        <button class="chip chip-auto active" onclick="setWeightRange('all', this)">Todo</button>
+        <button class="chip chip-auto" onclick="setWeightRange('1y', this)">1 año</button>
+        <button class="chip chip-auto" onclick="setWeightRange('6m', this)">6 meses</button>
+        <button class="chip chip-auto" onclick="setWeightRange('3m', this)">3 meses</button>
+        <button class="chip chip-auto" onclick="setWeightRange('1m', this)">1 mes</button>
       </div>
       <div id="weight-chart"></div>
     </div>
@@ -2352,9 +2358,11 @@ function addWeight() {
   const dateInput = document.getElementById('weight-date');
   const valueInput = document.getElementById('weight-value');
   const date = dateInput.value;
-  const val = parseFloat(valueInput.value);
+  // Aceptar tanto "75,42" como "75.42" como input
+  const raw = (valueInput.value || '').trim().replace(',', '.');
+  const val = parseFloat(raw);
   if (!date) { alert('Elegí una fecha'); return; }
-  if (isNaN(val) || val <= 0) { alert('Ingresá un peso válido'); return; }
+  if (isNaN(val) || val <= 0) { alert('Ingresá un peso válido (ej: 75,42)'); return; }
   const weights = getWeights();
   weights[date] = val;
   saveWeights(weights);
