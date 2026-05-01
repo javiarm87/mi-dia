@@ -246,12 +246,12 @@
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 4px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   .cal-wd {
     text-align: center;
     font-size: 10px; color: var(--text-2);
-    font-weight: 600; padding: 4px 0;
+    font-weight: 600; padding: 2px 0;
     text-transform: uppercase;
   }
   .cal-grid {
@@ -273,6 +273,8 @@
   }
   .cal-day.empty { background: transparent; cursor: default; }
   .cal-day.future { opacity: 0.3; cursor: default; }
+  .cal-day.other-month { opacity: 0.45; }
+  .cal-day.other-month.future { opacity: 0.2; }
   .cal-day.today { box-shadow: inset 0 0 0 2px var(--blue); }
   .cal-day.l0 { background: #FF3B30; color: white; }
   .cal-day.l1 { background: #FF8C42; color: white; }
@@ -782,7 +784,7 @@
       </div>
       <div style="margin-bottom:12px">
         <div style="font-size:12px;color:var(--text-2);margin-bottom:4px">Peso (kg)</div>
-        <input type="number" id="weight-value" step="0.1" min="0" placeholder="ej. 75.4" inputmode="decimal" style="width:100%;padding:10px 12px;border:1px solid var(--separator);border-radius:8px;font-size:15px;background:var(--bg)">
+        <input type="number" id="weight-value" step="0.01" min="0" placeholder="ej. 75.42" inputmode="decimal" style="width:100%;padding:10px 12px;border:1px solid var(--separator);border-radius:8px;font-size:15px;background:var(--bg)">
       </div>
       <button class="primary-btn" onclick="addWeight()" style="width:100%">Guardar peso</button>
     </div>
@@ -883,10 +885,34 @@
           <div id="gist-status" style="font-size:12px;margin-top:8px;text-align:center;color:var(--text-2);min-height:18px"></div>
         </div>
 
+        <div class="settings-section" style="margin-top:8px">Compartir app</div>
+        <div style="padding: 8px 16px 12px">
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:10px;line-height:1.4">
+            Mostrale este QR a un amigo. Lo escanea con la cámara del iPhone y abre la app en Safari.
+          </div>
+          <button class="secondary-btn" style="margin:0;width:100%" onclick="showShareQR()">📲 Mostrar QR para compartir</button>
+        </div>
+
         <div class="settings-section" style="margin-top:8px">Datos</div>
         <div style="padding: 12px 16px">
           <button class="secondary-btn" style="margin:0;color:var(--red)" onclick="resetAllData()">🗑 Borrar todos los datos</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR share modal -->
+  <div class="modal-backdrop" id="qr-modal" onclick="closeShareQR(event)">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:340px">
+      <div class="modal-header">
+        <div class="modal-title">📲 Compartir app</div>
+        <button class="modal-close" onclick="closeShareQR()">✕</button>
+      </div>
+      <div class="modal-body" style="text-align:center;padding:20px">
+        <div id="qr-canvas" style="display:flex;justify-content:center;margin-bottom:16px;min-height:240px;align-items:center"></div>
+        <div id="qr-url" style="font-size:12px;color:var(--text-2);word-break:break-all;font-family:monospace;margin-bottom:14px;padding:8px;background:var(--bg);border-radius:8px"></div>
+        <button class="secondary-btn" style="width:100%;margin:0" onclick="copyAppUrl()">📋 Copiar enlace</button>
+        <div id="qr-copy-status" style="font-size:12px;color:var(--green);margin-top:6px;min-height:16px"></div>
       </div>
     </div>
   </div>
@@ -948,28 +974,28 @@ function getFoodHabit() {
 
 const MENU = {
   A: [
-    { dia: 'Lunes', plato: 'Merluza al horno con papas, cebolla y morrón + ensalada verde',
+    { dia: 'Lunes', plato: 'Merluza al horno (180g) con papas, cebolla y morrón + ensalada verde',
       ingredientes: ['Merluza filet', 'Papas', 'Cebolla', 'Morrón', 'Lechuga'] },
-    { dia: 'Martes', plato: 'Guiso mixto (lentejas + porotos) con calabaza, zanahoria y choclo',
-      ingredientes: ['Lentejas', 'Porotos colorados', 'Calabaza', 'Zanahoria', 'Choclo lata'] },
-    { dia: 'Miércoles', plato: 'Pollo al horno con batata + coliflor asado con ajo y parmesano',
+    { dia: 'Martes', plato: 'Guiso de lentejas + atún + huevo duro con calabaza, zanahoria y choclo',
+      ingredientes: ['Lentejas', 'Atún en lata', 'Huevos', 'Calabaza', 'Zanahoria', 'Choclo lata', 'Cebolla'] },
+    { dia: 'Miércoles', plato: 'Pollo al horno (180g) + batata + coliflor con ajo y parmesano',
       ingredientes: ['Pechuga de pollo', 'Batata', 'Coliflor', 'Queso rallado'] },
-    { dia: 'Jueves', plato: 'Tarta de acelga y queso + ensalada de zanahoria y huevo duro',
-      ingredientes: ['Acelga', 'Queso rallado', 'Ricota', 'Zanahoria', 'Huevos', 'Lechuga'] },
-    { dia: 'Viernes', plato: 'Salmón a la plancha + quinoa con hongos + brócoli salteado',
+    { dia: 'Jueves', plato: 'Tarta de acelga y ricota + pollo grillé (150g) + ensalada zanahoria/huevo',
+      ingredientes: ['Pechuga de pollo', 'Acelga', 'Queso rallado', 'Ricota', 'Zanahoria', 'Huevos', 'Lechuga'] },
+    { dia: 'Viernes', plato: 'Salmón a la plancha (150g) + quinoa con hongos + brócoli salteado',
       ingredientes: ['Salmón filet', 'Quinoa', 'Hongos frescos', 'Brócoli'] },
   ],
   B: [
-    { dia: 'Lunes', plato: 'Wok de pollo con morrón, brócoli y cebolla + arroz integral',
+    { dia: 'Lunes', plato: 'Wok de pollo (180g) con morrón, brócoli y cebolla + arroz integral',
       ingredientes: ['Pechuga de pollo', 'Morrón', 'Brócoli', 'Cebolla', 'Arroz integral'] },
-    { dia: 'Martes', plato: 'Risotto de hongos con parmesano + ensalada rúcula y tomate',
-      ingredientes: ['Arroz integral', 'Hongos frescos', 'Queso rallado', 'Rúcula', 'Tomate'] },
-    { dia: 'Miércoles', plato: 'Pastel de calabaza y osobuco + ensalada',
-      ingredientes: ['Calabaza', 'Osobuco', 'Lechuga'] },
-    { dia: 'Jueves', plato: 'Milanesas de berenjena al horno con puré mixto',
-      ingredientes: ['Berenjenas', 'Huevos', 'Pan lactal int.', 'Papas', 'Calabaza'] },
+    { dia: 'Martes', plato: 'Risotto de hongos con parmesano + pollo grillé (150g) + ensalada rúcula',
+      ingredientes: ['Pechuga de pollo', 'Arroz integral', 'Hongos frescos', 'Queso rallado', 'Rúcula', 'Tomate', 'Cebolla'] },
+    { dia: 'Miércoles', plato: 'Pastel de calabaza con osobuco (150g) + ensalada',
+      ingredientes: ['Osobuco', 'Calabaza', 'Cebolla', 'Lechuga'] },
+    { dia: 'Jueves', plato: 'Milanesa de pollo (1) + milanesa de berenjena (1) al horno + puré mixto papa/calabaza',
+      ingredientes: ['Pechuga de pollo', 'Berenjenas', 'Huevos', 'Pan rallado', 'Papas', 'Calabaza'] },
     { dia: 'Viernes', plato: 'Canelones de acelga y ricota + ensalada verde',
-      ingredientes: ['Masa canelones', 'Acelga', 'Ricota', 'Lechuga'] },
+      ingredientes: ['Masa canelones', 'Acelga', 'Ricota', 'Queso rallado', 'Lechuga', 'Tomate triturado'] },
   ],
   viandas: [
     { dia: 'Lunes', desayuno: 'Hummus + bastones zanahoria/pepino', merienda: 'Muffin banana + manzana',
@@ -1013,21 +1039,25 @@ const COMPRAS = {
   mensual: [
     { cat: 'Despensa', items: [
       ['Arroz integral', '2 kg'], ['Quinoa', '1 kg'], ['Lentejas', '1 kg'],
-      ['Porotos colorados', '1 kg'], ['Garbanzos', '2 kg'], ['Masa canelones', '2 paq.'],
+      ['Garbanzos', '2 kg'], ['Masa canelones', '2 paq.'],
       ['Harina integral', '1 kg'], ['Harina común', '1 kg'], ['Avena', '1 kg'],
       ['Polvo hornear', '1 paq.'], ['Tomate triturado', '6 latas'], ['Choclo lata', '4 latas'],
+      ['Atún en lata', '4 latas'], ['Pan rallado', '500 g'],
       ['Almidón de mandioca', '500 g'], ['Azúcar', '500 g']
     ]},
     { cat: 'Aceites/Especias', items: [
-      ['Aceite oliva', '750 ml'], ['Aceite girasol', '1.5 L'], ['Vinagre', '500 ml'],
+      ['Aceite oliva', '1 L'], ['Aceite girasol', '1.5 L'], ['Vinagre', '500 ml'],
       ['Sal', '1 kg'], ['Pimienta', '100 g'], ['Ajo polvo', '1 frasco'],
       ['Comino', '1 frasco'], ['Pimentón', '1 frasco'], ['Orégano', '1 frasco'],
       ['Miel', '500 g'], ['Tahini', '500 g'], ['Canela', '1 frasco'],
       ['Nuez moscada', '1 frasco']
     ]},
     { cat: 'Carnes para congelar', items: [
-      ['Pechuga de pollo', '4 kg (8×500g)'], ['Merluza filet', '3 kg (7×400g)'],
-      ['Salmón filet', '2 kg (5×400g)'], ['Osobuco', '2 kg (4×500g)']
+      ['Pechuga de pollo', '5 kg (10×500g)'], ['Merluza filet', '2 kg (5×400g)'],
+      ['Salmón filet', '1.2 kg (4×300g)'], ['Osobuco', '1.5 kg (3×500g)']
+    ]},
+    { cat: 'Snacks (vos)', items: [
+      ['Almendras', '500 g'], ['Yogur griego natural', '1 kg']
     ]}
   ],
   semanaA: [
@@ -1056,9 +1086,9 @@ const COMPRAS = {
       ['Limones', '2'], ['Bananas', '1 kg'], ['Manzanas', '1 kg'],
       ['Mandarinas', '500 g'], ['Uvas', '300 g']
     ]},
-    { cat: 'Lácteos/Pan', items: [
-      ['Huevos', '12'], ['Leche', '2 L'], ['Queso rallado', '200 g'],
-      ['Ricota', '500 g'], ['Manteca', '200 g'], ['Pan lactal int.', '1 paq.']
+    { cat: 'Lácteos', items: [
+      ['Huevos', '12'], ['Leche', '2 L'], ['Queso rallado', '300 g'],
+      ['Ricota', '500 g'], ['Manteca', '200 g']
     ]}
   ]
 };
@@ -1475,7 +1505,26 @@ function renderCalendar() {
 
   let html = '<div class="cal-weekdays">' + WEEKDAYS_ES.map(d => `<div class="cal-wd">${d}</div>`).join('') + '</div>';
   html += '<div class="cal-grid">';
-  for (let i = 0; i < startDow; i++) html += '<div class="cal-day empty"></div>';
+
+  // Días del mes anterior para completar la primera semana
+  if (startDow > 0) {
+    const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
+    for (let i = startDow - 1; i >= 0; i--) {
+      const dnum = prevMonthDays - i;
+      const d = new Date(calYear, calMonth - 1, dnum);
+      d.setHours(0,0,0,0);
+      const k = dateKey(d);
+      const day = data[k] || {};
+      const isFuture = d > today;
+      if (isFuture) {
+        html += `<div class="cal-day other-month"><span class="num">${dnum}</span></div>`;
+        continue;
+      }
+      const m = computeDayMetrics(day);
+      const cls = colorClassFromPct(m.pctScore, m.hasAny);
+      html += `<div class="cal-day other-month ${cls}" onclick="showDayDetail('${k}')"><span class="num">${dnum}</span></div>`;
+    }
+  }
 
   for (let dnum = 1; dnum <= daysInMonth; dnum++) {
     const d = new Date(calYear, calMonth, dnum);
@@ -1499,6 +1548,25 @@ function renderCalendar() {
 
     html += `<div class="cal-day ${cls} ${todayCls}" onclick="showDayDetail('${k}')" title="${k}: ${m.count}/${m.total}"><span class="num">${dnum}</span>${fIcon}${star}</div>`;
   }
+
+  // Completar la última semana con días del mes siguiente
+  const totalCells = startDow + daysInMonth;
+  const remainder = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= remainder; i++) {
+    const d = new Date(calYear, calMonth + 1, i);
+    d.setHours(0,0,0,0);
+    const isFuture = d > today;
+    if (isFuture) {
+      html += `<div class="cal-day other-month"><span class="num">${i}</span></div>`;
+      continue;
+    }
+    const k = dateKey(d);
+    const day = data[k] || {};
+    const m = computeDayMetrics(day);
+    const cls = colorClassFromPct(m.pctScore, m.hasAny);
+    html += `<div class="cal-day other-month ${cls}" onclick="showDayDetail('${k}')"><span class="num">${i}</span></div>`;
+  }
+
   body.innerHTML = html + '</div>';
 }
 
@@ -1646,7 +1714,28 @@ function renderDetCalendar() {
 
   let html = '<div class="cal-weekdays">' + WEEKDAYS_ES.map(d => `<div class="cal-wd">${d}</div>`).join('') + '</div>';
   html += '<div class="cal-grid">';
-  for (let i = 0; i < startDow; i++) html += '<div class="cal-day empty"></div>';
+
+  // Días del mes anterior
+  if (startDow > 0) {
+    const prevMonthDays = new Date(detCalYear, detCalMonth, 0).getDate();
+    for (let i = startDow - 1; i >= 0; i--) {
+      const dnum = prevMonthDays - i;
+      const d = new Date(detCalYear, detCalMonth - 1, dnum);
+      d.setHours(0,0,0,0);
+      const k = dateKey(d);
+      const day = data[k] || {};
+      const isFuture = d > today;
+      let cls = '';
+      if (!isFuture) {
+        if (cur.type === 'food') {
+          if (day.food === 'good') cls = 'l4';
+          else if (day.food === 'bad') cls = 'l0';
+        } else if (day[cur.id]) cls = 'l4';
+      }
+      const click = isFuture ? '' : `onclick="showDayDetail('${k}')"`;
+      html += `<div class="cal-day other-month ${cls}" ${click}><span class="num">${dnum}</span></div>`;
+    }
+  }
 
   for (let dnum = 1; dnum <= daysInMonth; dnum++) {
     const d = new Date(detCalYear, detCalMonth, dnum);
@@ -1670,6 +1759,27 @@ function renderDetCalendar() {
     }
     html += `<div class="cal-day ${cls} ${todayCls}" onclick="showDayDetail('${k}')"><span class="num">${dnum}</span></div>`;
   }
+
+  // Mes siguiente
+  const totalCells = startDow + daysInMonth;
+  const remainder = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= remainder; i++) {
+    const d = new Date(detCalYear, detCalMonth + 1, i);
+    d.setHours(0,0,0,0);
+    const isFuture = d > today;
+    const k = dateKey(d);
+    const day = data[k] || {};
+    let cls = '';
+    if (!isFuture) {
+      if (cur.type === 'food') {
+        if (day.food === 'good') cls = 'l4';
+        else if (day.food === 'bad') cls = 'l0';
+      } else if (day[cur.id]) cls = 'l4';
+    }
+    const click = isFuture ? '' : `onclick="showDayDetail('${k}')"`;
+    html += `<div class="cal-day other-month ${cls}" ${click}><span class="num">${i}</span></div>`;
+  }
+
   body.innerHTML = html + '</div>';
 
   // Leyenda dinámica del calendario de detalle
@@ -2014,7 +2124,23 @@ function renderHoyCalendar() {
 
   let html = '<div class="cal-weekdays">' + WEEKDAYS_ES.map(d => `<div class="cal-wd">${d}</div>`).join('') + '</div>';
   html += '<div class="cal-grid">';
-  for (let i = 0; i < startDow; i++) html += '<div class="cal-day empty"></div>';
+
+  // Días del mes anterior
+  if (startDow > 0) {
+    const prevMonthDays = new Date(hoyCalYear, hoyCalMonth, 0).getDate();
+    for (let i = startDow - 1; i >= 0; i--) {
+      const dnum = prevMonthDays - i;
+      const d = new Date(hoyCalYear, hoyCalMonth - 1, dnum);
+      d.setHours(0,0,0,0);
+      const isFuture = d > today;
+      const k = dateKey(d);
+      const day = data[k] || {};
+      const m_ = computeDayMetrics(day);
+      const cls = isFuture ? '' : colorClassFromPct(m_.pctScore, m_.hasAny);
+      const click = isFuture ? '' : `onclick="hoyPickDate('${k}')"`;
+      html += `<div class="cal-day other-month ${cls}" ${click}><span class="num">${dnum}</span></div>`;
+    }
+  }
 
   for (let dnum = 1; dnum <= daysInMonth; dnum++) {
     const d = new Date(hoyCalYear, hoyCalMonth, dnum);
@@ -2038,6 +2164,22 @@ function renderHoyCalendar() {
     const todayCls = isToday || isSelected ? 'today' : '';
     html += `<div class="cal-day ${cls} ${todayCls}" onclick="hoyPickDate('${k}')"><span class="num">${dnum}</span>${fIcon}${star}</div>`;
   }
+
+  // Mes siguiente
+  const totalCells = startDow + daysInMonth;
+  const remainder = (7 - (totalCells % 7)) % 7;
+  for (let i = 1; i <= remainder; i++) {
+    const d = new Date(hoyCalYear, hoyCalMonth + 1, i);
+    d.setHours(0,0,0,0);
+    const isFuture = d > today;
+    const k = dateKey(d);
+    const day = data[k] || {};
+    const m_ = computeDayMetrics(day);
+    const cls = isFuture ? '' : colorClassFromPct(m_.pctScore, m_.hasAny);
+    const click = isFuture ? '' : `onclick="hoyPickDate('${k}')"`;
+    html += `<div class="cal-day other-month ${cls}" ${click}><span class="num">${i}</span></div>`;
+  }
+
   body.innerHTML = html + '</div>';
 }
 
@@ -2280,17 +2422,17 @@ function renderWeightStats() {
   grid.innerHTML = `
     <div class="stat" style="background:var(--card)">
       <div class="stat-label">⚖️ Peso actual</div>
-      <div class="stat-value">${last.val.toFixed(1)} kg</div>
+      <div class="stat-value">${last.val.toFixed(2)} kg</div>
       <div class="stat-sub">${formatShortDate(last.date)}</div>
     </div>
     <div class="stat" style="background:var(--card)">
       <div class="stat-label">vs anterior</div>
-      <div class="stat-value" style="color:${color(diffWeek)}">${arrow(diffWeek)} ${Math.abs(diffWeek).toFixed(1)}</div>
+      <div class="stat-value" style="color:${color(diffWeek)}">${arrow(diffWeek)} ${Math.abs(diffWeek).toFixed(2)}</div>
       <div class="stat-sub">kg desde último</div>
     </div>
     <div class="stat" style="background:var(--card)">
       <div class="stat-label">vs inicio</div>
-      <div class="stat-value" style="color:${color(diffTotal)}">${arrow(diffTotal)} ${Math.abs(diffTotal).toFixed(1)}</div>
+      <div class="stat-value" style="color:${color(diffTotal)}">${arrow(diffTotal)} ${Math.abs(diffTotal).toFixed(2)}</div>
       <div class="stat-sub">kg total</div>
     </div>
     <div class="stat" style="background:var(--card)">
@@ -2314,7 +2456,7 @@ function renderWeightChart() {
     return;
   }
   if (data.length === 1) {
-    container.innerHTML = `<div style="text-align:center;padding:30px;font-size:24px;font-weight:600">${data[0].val.toFixed(1)} kg</div><div style="text-align:center;color:var(--text-2);font-size:13px">Cargá otro pesaje para ver la tendencia</div>`;
+    container.innerHTML = `<div style="text-align:center;padding:30px;font-size:24px;font-weight:600">${data[0].val.toFixed(2)} kg</div><div style="text-align:center;color:var(--text-2);font-size:13px">Cargá otro pesaje para ver la tendencia</div>`;
     return;
   }
 
@@ -2360,7 +2502,7 @@ function renderWeightChart() {
     const v = yMin + (yRange * i / tickCount);
     const y = H - P - (i / tickCount) * (H - 2 * P);
     yTicks += `<line x1="${P}" y1="${y.toFixed(1)}" x2="${(W-P).toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E5E5EA" stroke-dasharray="2,3"/>`;
-    yTicks += `<text x="${P-4}" y="${(y+3).toFixed(1)}" font-size="9" fill="#8E8E93" text-anchor="end">${v.toFixed(1)}</text>`;
+    yTicks += `<text x="${P-4}" y="${(y+3).toFixed(1)}" font-size="9" fill="#8E8E93" text-anchor="end">${v.toFixed(2)}</text>`;
   }
 
   // X axis labels (primera, mitad, última)
@@ -2374,7 +2516,7 @@ function renderWeightChart() {
   // Dots
   const dots = points.map(p =>
     `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="white" stroke="#007AFF" stroke-width="2">
-       <title>${formatShortDate(p.date)}: ${p.val.toFixed(1)} kg</title>
+       <title>${formatShortDate(p.date)}: ${p.val.toFixed(2)} kg</title>
      </circle>`
   ).join('');
 
@@ -2408,12 +2550,12 @@ function renderWeightHistory() {
     const arrow = diff > 0.05 ? '↑' : diff < -0.05 ? '↓' : '→';
     const color = diff > 0.05 ? '#FF3B30' : diff < -0.05 ? '#34C759' : '#8E8E93';
     const diffLabel = next
-      ? `<span style="color:${color};font-size:13px">${arrow} ${Math.abs(diff).toFixed(1)}</span>`
+      ? `<span style="color:${color};font-size:13px">${arrow} ${Math.abs(diff).toFixed(2)}</span>`
       : `<span style="color:var(--text-2);font-size:12px">primero</span>`;
     return `
       <div class="row">
         <div class="row-left">
-          <div class="row-text">${w.val.toFixed(1)} kg</div>
+          <div class="row-text">${w.val.toFixed(2)} kg</div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           ${diffLabel}
@@ -2595,6 +2737,64 @@ function loadGistConfigUI() {
     const d = new Date(last);
     setGistStatus(`Último backup: ${d.toLocaleString('es-AR')}`, 'gray');
   }
+}
+
+// ============ SHARE QR ============
+function getAppUrl() {
+  // Usar la URL actual sin path/query/hash
+  return location.origin + location.pathname.replace(/[^/]*$/, '');
+}
+
+function copyAppUrl() {
+  const url = getAppUrl();
+  const status = document.getElementById('qr-copy-status');
+  navigator.clipboard.writeText(url).then(() => {
+    status.textContent = '✅ Enlace copiado';
+    setTimeout(() => { status.textContent = ''; }, 2500);
+  }).catch(() => {
+    status.textContent = '❌ No se pudo copiar';
+  });
+}
+
+function showShareQR() {
+  const url = getAppUrl();
+  document.getElementById('qr-url').textContent = url;
+  document.getElementById('qr-canvas').innerHTML = '<div style="color:var(--text-2);font-size:13px">Generando…</div>';
+  document.getElementById('qr-modal').classList.add('active');
+
+  // Cargar lib QR si no está
+  if (typeof QRCode === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+    script.onload = () => renderShareQR(url);
+    script.onerror = () => {
+      document.getElementById('qr-canvas').innerHTML =
+        '<div style="color:var(--red);font-size:13px;padding:20px">Sin conexión. Copiá el enlace abajo.</div>';
+    };
+    document.body.appendChild(script);
+  } else {
+    renderShareQR(url);
+  }
+}
+
+function renderShareQR(url) {
+  const container = document.getElementById('qr-canvas');
+  container.innerHTML = '';
+  new QRCode(container, {
+    text: url,
+    width: 240,
+    height: 240,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+function closeShareQR(event) {
+  if (event && event.target.id !== 'qr-modal' && !event.target.classList.contains('modal-close')) {
+    if (event.currentTarget !== event.target) return;
+  }
+  document.getElementById('qr-modal').classList.remove('active');
 }
 
 // ============ INIT ============
