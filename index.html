@@ -33,7 +33,7 @@
     height: 100%;
   }
   body {
-    padding-bottom: calc(83px + env(safe-area-inset-bottom));
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
     padding-top: env(safe-area-inset-top);
   }
   .app { max-width: 640px; margin: 0 auto; min-height: 100vh; }
@@ -801,12 +801,12 @@
     <!-- Chart -->
     <div class="chart-card">
       <div class="chart-title">📈 Evolución de peso</div>
-      <div class="chart-controls" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-        <button class="chip chip-auto active" onclick="setWeightRange('all', this)">Todo</button>
-        <button class="chip chip-auto" onclick="setWeightRange('1y', this)">1 año</button>
-        <button class="chip chip-auto" onclick="setWeightRange('6m', this)">6 meses</button>
-        <button class="chip chip-auto" onclick="setWeightRange('3m', this)">3 meses</button>
-        <button class="chip chip-auto" onclick="setWeightRange('1m', this)">1 mes</button>
+      <div class="chart-controls" style="display:flex;gap:4px;margin-bottom:10px">
+        <button class="chip active" onclick="setWeightRange('all', this)" style="flex:1;padding:8px 2px;font-size:12px">Todo</button>
+        <button class="chip" onclick="setWeightRange('1y', this)" style="flex:1;padding:8px 2px;font-size:12px">1 año</button>
+        <button class="chip" onclick="setWeightRange('6m', this)" style="flex:1;padding:8px 2px;font-size:12px">6 m</button>
+        <button class="chip" onclick="setWeightRange('3m', this)" style="flex:1;padding:8px 2px;font-size:12px">3 m</button>
+        <button class="chip" onclick="setWeightRange('1m', this)" style="flex:1;padding:8px 2px;font-size:12px">1 m</button>
       </div>
       <div id="weight-chart"></div>
     </div>
