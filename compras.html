@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Compras">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23007AFF'/%3E%3Ctext x='90' y='118' font-size='90' text-anchor='middle' fill='white' font-family='-apple-system'%3E🛒%3C/text%3E%3C/svg%3E">
+<title>Compras</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #F2F2F7;
+    --card: #FFFFFF;
+    --text: #000000;
+    --text-2: #8E8E93;
+    --separator: #E5E5EA;
+    --green: #34C759;
+    --red: #FF3B30;
+    --blue: #007AFF;
+  }
+  html, body {
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+    color: var(--text);
+    overscroll-behavior-y: none;
+    height: 100%;
+  }
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .app { max-width: 640px; margin: 0 auto; min-height: 100vh; }
+
+  .header {
+    padding: 8px 20px 12px;
+    background: rgba(242, 242, 247, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+  }
+  .header .subtitle { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+  .sync-badge {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-2);
+    font-weight: 500;
+  }
+  .sync-badge.syncing { color: var(--blue); }
+  .sync-badge.error { color: var(--red); }
+
+  .content { padding: 0 16px 80px; }
+
+  .chips {
+    display: flex;
+    gap: 6px;
+    padding: 0 0 8px;
+    width: 100%;
+  }
+  .chip {
+    border: none;
+    background: var(--card);
+    padding: 8px 4px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chip.active { background: var(--blue); color: white; }
+
+  .missing-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    padding: 8px 14px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 28px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #E9E9EB;
+    border-radius: 28px;
+    transition: 0.2s;
+  }
+  .slider:before {
+    content: "";
+    position: absolute;
+    height: 24px; width: 24px;
+    left: 2px; bottom: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .switch input:checked + .slider { background-color: var(--green); }
+  .switch input:checked + .slider:before { transform: translateX(20px); }
+
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .card-title {
+    font-size: 13px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 0 16px 8px;
+    margin-top: 16px;
+    font-weight: 500;
+  }
+  .row {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 0.5px solid var(--separator);
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .row:last-child { border-bottom: none; }
+  .row-text { font-size: 16px; flex: 1; }
+  .row-text.checked { text-decoration: line-through; color: var(--text-2); }
+  .row-detail { font-size: 13px; color: var(--text-2); margin-right: 10px; }
+  .check {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid #C7C7CC;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .check.on {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .check.on::after { content: '✓'; color: white; font-size: 14px; font-weight: 700; }
+
+  .empty {
+    text-align: center;
+    color: var(--text-2);
+    padding: 60px 20px;
+    font-size: 15px;
+  }
+  .error-box {
+    background: #FFE5E5;
+    border-radius: 14px;
+    padding: 20px;
+    margin: 30px 16px;
+    color: var(--red);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  input, select, button { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <h1>🛒 Compras</h1>
+      <div class="subtitle" id="subtitle">Cargando…</div>
+    </div>
+    <div class="sync-badge" id="sync-badge">⏳</div>
+  </div>
+
+  <div class="content">
+    <div id="error-area"></div>
+    <div id="filters-area" style="display:none">
+      <div class="chips">
+        <button class="chip active" onclick="filterCompras('mensual', this)">Mensuales</button>
+        <button class="chip" onclick="filterCompras('semanaA', this)">Opción A</button>
+        <button class="chip" onclick="filterCompras('semanaB', this)">Opción B</button>
+        <button class="chip" onclick="filterCompras('todos', this)">Todos</button>
+      </div>
+      <label class="missing-toggle">
+        <span style="font-size:14px;font-weight:500">Solo faltantes</span>
+        <span class="switch">
+          <input type="checkbox" id="only-missing" onchange="toggleOnlyMissing(this.checked)">
+          <span class="slider"></span>
+        </span>
+      </label>
+    </div>
+    <div id="compras-content"></div>
+  </div>
+</div>
+
+<script>
+// ============ DATA SOURCE ============
+const params = new URLSearchParams(location.hash.slice(1) || location.search);
+const TOKEN = params.get('t') || params.get('token');
+const GIST_ID = params.get('g') || params.get('gist');
+
+let snapshot = null;
+let comprasState = {};
+let comprasDef = null;
+let currentScope = 'mensual';
+let onlyMissing = false;
+let pendingChanges = {};
+let saveTimer = null;
+
+// ============ UI HELPERS ============
+function setSyncStatus(status, msg) {
+  const el = document.getElementById('sync-badge');
+  if (status === 'syncing') {
+    el.className = 'sync-badge syncing';
+    el.textContent = '↻ ' + (msg || 'Sincronizando…');
+  } else if (status === 'error') {
+    el.className = 'sync-badge error';
+    el.textContent = '⚠ ' + (msg || 'Error');
+  } else if (status === 'ok') {
+    el.className = 'sync-badge';
+    const time = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    el.textContent = '✓ ' + time;
+  } else {
+    el.className = 'sync-badge';
+    el.textContent = msg || '';
+  }
+}
+
+function showError(msg) {
+  document.getElementById('error-area').innerHTML = `<div class="error-box">${msg}</div>`;
+  document.getElementById('subtitle').textContent = '';
+}
+
+// ============ GIST API ============
+async function loadFromGist() {
+  if (!TOKEN || !GIST_ID) {
+    showError('Falta el link correcto. Pediselo a Javi.');
+    return;
+  }
+  setSyncStatus('syncing', 'Bajando…');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${TOKEN}`
+      },
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const file = json.files && json.files['mi-dia.json'];
+    if (!file) throw new Error('No encuentro mi-dia.json');
+    const content = file.truncated
+      ? await (await fetch(file.raw_url)).text()
+      : file.content;
+    snapshot = JSON.parse(content);
+    comprasState = snapshot.compras || {};
+    comprasDef = snapshot.comprasDef || DEFAULT_COMPRAS;
+    document.getElementById('filters-area').style.display = 'block';
+    renderList();
+    setSyncStatus('ok');
+  } catch (e) {
+    setSyncStatus('error', e.message);
+    if (snapshot === null) {
+      showError('No pude cargar la lista. Revisá tu conexión.<br><small>' + e.message + '</small>');
+    }
+  }
+}
+
+async function pushToGist() {
+  if (!snapshot) return;
+  // Mergear pendingChanges sobre snapshot
+  Object.entries(pendingChanges).forEach(([k, v]) => {
+    if (v) comprasState[k] = true;
+    else delete comprasState[k];
+  });
+  pendingChanges = {};
+  snapshot.compras = comprasState;
+  snapshot.lastModifiedFromShop = new Date().toISOString();
+
+  setSyncStatus('syncing', 'Subiendo…');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        files: { 'mi-dia.json': { content: JSON.stringify(snapshot, null, 2) } }
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    setSyncStatus('ok');
+  } catch (e) {
+    setSyncStatus('error', e.message);
+  }
+}
+
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushToGist, 600);
+}
+
+// ============ POLLING (refrescar cambios del otro usuario) ============
+async function pollGist() {
+  if (!TOKEN || !GIST_ID || !snapshot) return;
+  try {
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${TOKEN}`
+      },
+      cache: 'no-store'
+    });
+    if (!res.ok) return;
+    const json = await res.json();
+    const file = json.files && json.files['mi-dia.json'];
+    if (!file) return;
+    const content = file.truncated
+      ? await (await fetch(file.raw_url)).text()
+      : file.content;
+    const newSnap = JSON.parse(content);
+    // Solo actualizar si cambió y no tenemos cambios pendientes locales
+    const localStr = JSON.stringify(comprasState);
+    const remoteStr = JSON.stringify(newSnap.compras || {});
+    if (localStr !== remoteStr && Object.keys(pendingChanges).length === 0) {
+      snapshot = newSnap;
+      comprasState = newSnap.compras || {};
+      if (newSnap.comprasDef) comprasDef = newSnap.comprasDef;
+      renderList();
+    }
+  } catch (e) { /* ignorar errores de polling */ }
+}
+
+// ============ LIST RENDERING ============
+function buildAllItems() {
+  const seen = new Set();
+  const groups = {};
+  ['mensual','semanaA','semanaB'].forEach(scope => {
+    if (!comprasDef[scope]) return;
+    comprasDef[scope].forEach(g => {
+      g.items.forEach(([nombre, cant]) => {
+        if (seen.has(nombre)) return;
+        seen.add(nombre);
+        if (!groups[g.cat]) groups[g.cat] = [];
+        groups[g.cat].push([nombre, cant]);
+      });
+    });
+  });
+  return Object.keys(groups).map(cat => ({ cat, items: groups[cat] }));
+}
+
+function getGroups() {
+  if (currentScope === 'todos') return buildAllItems();
+  return comprasDef[currentScope] || [];
+}
+
+function renderList() {
+  const groups = getGroups();
+  let total = 0, done = 0;
+  let html = '';
+  groups.forEach(g => {
+    const filtered = g.items.filter(([nombre]) => {
+      total++;
+      if (comprasState[nombre]) done++;
+      return onlyMissing ? !comprasState[nombre] : true;
+    });
+    if (filtered.length === 0) return;
+    html += `<div class="card-title">${g.cat}</div><div class="card">`;
+    filtered.forEach(([nombre, cant]) => {
+      const checked = !!comprasState[nombre];
+      html += `
+        <div class="row" onclick="toggleItem('${nombre.replace(/'/g, "\\'")}')">
+          <div class="row-text ${checked ? 'checked' : ''}">${nombre}</div>
+          <div style="display:flex;align-items:center">
+            <div class="row-detail">${cant}</div>
+            <div class="check ${checked ? 'on' : ''}"></div>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  });
+  if (onlyMissing && html === '') html = '<div class="empty">✅ ¡Nada por comprar!</div>';
+  if (html === '') html = '<div class="empty">No hay items.</div>';
+
+  document.getElementById('compras-content').innerHTML = html;
+  document.getElementById('subtitle').textContent =
+    onlyMissing ? `${total - done} faltantes` : `${done} de ${total} marcados`;
+}
+
+function toggleItem(nombre) {
+  const newVal = !comprasState[nombre];
+  if (newVal) comprasState[nombre] = true;
+  else delete comprasState[nombre];
+  pendingChanges[nombre] = newVal;
+  renderList();
+  scheduleSave();
+}
+
+function filterCompras(scope, btn) {
+  currentScope = scope;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderList();
+}
+
+function toggleOnlyMissing(val) {
+  onlyMissing = val;
+  renderList();
+}
+
+// ============ DEFAULT COMPRAS (fallback si el snapshot no trae comprasDef) ============
+const DEFAULT_COMPRAS = {
+  mensual: [
+    { cat: 'Despensa', items: [
+      ['Arroz integral', '2 kg'], ['Quinoa', '1 kg'], ['Lentejas', '1 kg'],
+      ['Garbanzos', '2 kg'], ['Masa canelones', '2 paq.'],
+      ['Harina integral', '1 kg'], ['Harina común', '1 kg'], ['Avena', '1 kg'],
+      ['Polvo hornear', '1 paq.'], ['Tomate triturado', '6 latas'], ['Choclo lata', '4 latas'],
+      ['Atún en lata', '4 latas'], ['Pan rallado', '500 g'],
+      ['Almidón de mandioca', '500 g'], ['Azúcar', '500 g']
+    ]},
+    { cat: 'Aceites/Especias', items: [
+      ['Aceite oliva', '1 L'], ['Aceite girasol', '1.5 L'], ['Vinagre', '500 ml'],
+      ['Sal', '1 kg'], ['Pimienta', '100 g'], ['Ajo polvo', '1 frasco'],
+      ['Comino', '1 frasco'], ['Pimentón', '1 frasco'], ['Orégano', '1 frasco'],
+      ['Miel', '500 g'], ['Tahini', '500 g'], ['Canela', '1 frasco'],
+      ['Nuez moscada', '1 frasco']
+    ]},
+    { cat: 'Carnes para congelar', items: [
+      ['Pechuga de pollo', '5 kg (10×500g)'], ['Merluza filet', '2 kg (5×400g)'],
+      ['Salmón filet', '1.2 kg (4×300g)'], ['Osobuco', '1.5 kg (3×500g)']
+    ]},
+    { cat: 'Snacks', items: [
+      ['Almendras', '500 g'], ['Yogur griego natural', '1 kg']
+    ]}
+  ],
+  semanaA: [
+    { cat: 'Verduras', items: [
+      ['Papas', '1.5 kg'], ['Batata', '500 g'], ['Calabaza', '1'], ['Coliflor', '1'],
+      ['Acelga', '1 atado'], ['Lechuga', '1'], ['Zanahoria', '1 kg'], ['Pepino', '2'],
+      ['Cebolla', '1 kg'], ['Morrón', '2'], ['Brócoli', '1'], ['Hongos frescos', '200 g']
+    ]},
+    { cat: 'Frutas', items: [
+      ['Limones', '2'], ['Bananas', '1 kg'], ['Manzanas', '1 kg'],
+      ['Mandarinas', '500 g'], ['Uvas', '300 g']
+    ]},
+    { cat: 'Lácteos', items: [
+      ['Huevos', '12'], ['Leche', '2 L'], ['Queso rallado', '200 g'],
+      ['Ricota', '500 g'], ['Manteca', '200 g']
+    ]}
+  ],
+  semanaB: [
+    { cat: 'Verduras', items: [
+      ['Morrón', '2'], ['Brócoli', '1'], ['Cebolla', '1 kg'], ['Rúcula', '1 bolsa'],
+      ['Tomate', '500 g'], ['Calabaza', '1'], ['Lechuga', '1'], ['Berenjenas', '3'],
+      ['Papas', '1.5 kg'], ['Zanahoria', '1 kg'], ['Acelga', '1 atado'],
+      ['Pepino', '2'], ['Hongos frescos', '300 g']
+    ]},
+    { cat: 'Frutas', items: [
+      ['Limones', '2'], ['Bananas', '1 kg'], ['Manzanas', '1 kg'],
+      ['Mandarinas', '500 g'], ['Uvas', '300 g']
+    ]},
+    { cat: 'Lácteos', items: [
+      ['Huevos', '12'], ['Leche', '2 L'], ['Queso rallado', '300 g'],
+      ['Ricota', '500 g'], ['Manteca', '200 g']
+    ]}
+  ]
+};
+
+// ============ INIT ============
+loadFromGist();
+// Polling cada 12 segundos
+setInterval(pollGist, 12000);
+// Refresh cuando vuelve el foco
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) pollGist();
+});
+</script>
+</body>
+</html>
