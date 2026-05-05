@@ -33,7 +33,7 @@
     height: 100%;
   }
   body {
-    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    padding-bottom: calc(160px + env(safe-area-inset-bottom));
     padding-top: env(safe-area-inset-top);
   }
   .app { max-width: 640px; margin: 0 auto; min-height: 100vh; }
@@ -70,7 +70,7 @@
   }
 
   /* Sections */
-  .view { display: none; padding: 0 16px 20px; box-sizing: border-box; max-width: 100%; overflow-x: hidden; }
+  .view { display: none; padding: 0 16px 60px; box-sizing: border-box; max-width: 100%; overflow-x: hidden; }
   .view.active { display: block; }
 
   /* Cards */
@@ -671,6 +671,10 @@
       </span>
     </label>
     <div id="compras-content"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <button class="secondary-btn" style="margin:0" onclick="shareShoppingList()">📲 Compartir</button>
+      <button class="secondary-btn" style="margin:0" onclick="copyShoppingList()">📋 Copiar</button>
+    </div>
     <button class="reset-btn" onclick="resetCompras()">Desmarcar todo</button>
   </div>
 
@@ -899,11 +903,30 @@
           <button class="secondary-btn" style="margin:0;width:100%" onclick="showShareQR()">📲 Mostrar QR para compartir</button>
         </div>
 
+        <div class="settings-section" style="margin-top:8px">Lista compartida (familia)</div>
+        <div style="padding: 8px 16px 12px">
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:10px;line-height:1.4">
+            Generá un link para tu pareja o familia. Solo verán las compras y podrán marcar/desmarcar, sincronizado con tu Gist en tiempo real.
+          </div>
+          <button class="secondary-btn" style="margin:0;width:100%" onclick="showFamilyShareModal()">👨‍👩‍👧 Compartir lista de compras</button>
+        </div>
+
         <div class="settings-section" style="margin-top:8px">Datos</div>
         <div style="padding: 12px 16px">
           <button class="secondary-btn" style="margin:0;color:var(--red)" onclick="resetAllData()">🗑 Borrar todos los datos</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Family shopping share modal -->
+  <div class="modal-backdrop" id="family-share-modal" onclick="closeFamilyShareModal(event)">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:380px">
+      <div class="modal-header">
+        <div class="modal-title">👨‍👩‍👧 Lista compartida</div>
+        <button class="modal-close" onclick="closeFamilyShareModal()">✕</button>
+      </div>
+      <div class="modal-body" id="family-share-body" style="padding:18px"></div>
     </div>
   </div>
 
@@ -1369,6 +1392,52 @@ function resetCompras() {
     localStorage.setItem('compras', JSON.stringify(compras));
     renderCompras();
   }
+}
+
+function buildShoppingText() {
+  const compras = getCompras();
+  const groups = getComprasGroups();
+  const labels = { mensual: 'Mensuales', semanaA: 'Opción A', semanaB: 'Opción B', todos: 'Todos' };
+  const scopeLabel = labels[currentCompras] || 'Lista';
+
+  let text = `🛒 *Lista de compras — ${scopeLabel}*\n\n`;
+  let totalMissing = 0;
+
+  groups.forEach(g => {
+    const missing = g.items.filter(([nombre]) => !compras[nombre]);
+    if (missing.length === 0) return;
+    text += `*${g.cat}*\n`;
+    missing.forEach(([nombre, cant]) => {
+      text += `• ${nombre} — ${cant}\n`;
+      totalMissing++;
+    });
+    text += `\n`;
+  });
+
+  if (totalMissing === 0) {
+    text = `✅ ${scopeLabel}: todo marcado, no falta nada por comprar.`;
+  }
+  return text.trim();
+}
+
+function shareShoppingList() {
+  const text = buildShoppingText();
+  if (navigator.share) {
+    navigator.share({ title: 'Lista de compras', text }).catch(() => {});
+  } else {
+    // Fallback: WhatsApp web/app directo
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  }
+}
+
+function copyShoppingList() {
+  const text = buildShoppingText();
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Lista copiada al portapapeles');
+  }).catch(() => {
+    alert('No se pudo copiar');
+  });
 }
 
 // ============ STATS ============
@@ -2614,6 +2683,7 @@ function buildSnapshot() {
     exportedAt: new Date().toISOString(),
     tracker: getTracker(),
     compras: getCompras(),
+    comprasDef: COMPRAS,
     weights: getWeights(),
     habits: getHabits(),
     settings: {
@@ -2803,6 +2873,116 @@ function closeShareQR(event) {
     if (event.currentTarget !== event.target) return;
   }
   document.getElementById('qr-modal').classList.remove('active');
+}
+
+// ============ FAMILY SHARE ============
+function buildShareUrl() {
+  const cfg = gistConfig();
+  if (!cfg.token || !cfg.id) return null;
+  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+  // Usar hash en vez de query para que el token no quede en logs de servidor
+  return `${base}compras.html#t=${encodeURIComponent(cfg.token)}&g=${encodeURIComponent(cfg.id)}`;
+}
+
+function showFamilyShareModal() {
+  const cfg = gistConfig();
+  const body = document.getElementById('family-share-body');
+  if (!cfg.token || !cfg.id) {
+    body.innerHTML = `
+      <div style="background:#FFF4E5;border-radius:10px;padding:14px;font-size:13px;line-height:1.5;color:#7A4F00">
+        ⚠️ Primero necesitás configurar el sync con GitHub Gist arriba.<br><br>
+        1. Pegá tu Personal Access Token<br>
+        2. Tocá <b>⬆️ Subir</b> para generar el Gist<br>
+        3. Volvé acá para generar el link
+      </div>
+    `;
+    document.getElementById('family-share-modal').classList.add('active');
+    return;
+  }
+  const url = buildShareUrl();
+  // Antes de mostrar, asegurarme de que el Gist tenga la última data subida
+  body.innerHTML = `
+    <div style="font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:14px">
+      Compartí este link con tu pareja. Lo abren en Safari y pueden marcar/desmarcar items. Los cambios se sincronizan automáticamente.
+    </div>
+    <div id="family-share-status" style="font-size:12px;color:var(--blue);margin-bottom:10px;text-align:center">⏳ Subiendo última versión…</div>
+    <div style="background:var(--bg);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;word-break:break-all;margin-bottom:14px;line-height:1.4" id="family-share-url-display">${url}</div>
+    <button class="primary-btn" style="width:100%;margin-bottom:8px" onclick="copyFamilyUrl()">📋 Copiar link</button>
+    <button class="secondary-btn" style="width:100%;margin-bottom:8px" onclick="shareFamilyUrl()">📲 Compartir por WhatsApp</button>
+    <button class="secondary-btn" style="width:100%;margin:0" onclick="showFamilyQR()">🔲 Mostrar QR</button>
+    <div id="family-qr-canvas" style="margin-top:14px;display:flex;justify-content:center"></div>
+    <div style="background:#FFF4E5;border-radius:10px;padding:12px;margin-top:14px;font-size:12px;line-height:1.5;color:#7A4F00">
+      ⚠️ <b>Importante:</b> el link contiene tu token de GitHub. Compartilo solo con gente de confianza.
+    </div>
+  `;
+  document.getElementById('family-share-modal').classList.add('active');
+
+  // Subir snapshot actualizado para que ella reciba la última versión
+  gistUpload(true).then(() => {
+    const status = document.getElementById('family-share-status');
+    if (status) {
+      status.textContent = '✓ Lista actualizada en el Gist';
+      status.style.color = 'var(--green)';
+    }
+  }).catch(() => {
+    const status = document.getElementById('family-share-status');
+    if (status) {
+      status.textContent = '⚠️ No se pudo subir, revisá tu sync';
+      status.style.color = 'var(--red)';
+    }
+  });
+}
+
+function closeFamilyShareModal(event) {
+  if (event && event.target.id !== 'family-share-modal' && !event.target.classList.contains('modal-close')) {
+    if (event.currentTarget !== event.target) return;
+  }
+  document.getElementById('family-share-modal').classList.remove('active');
+}
+
+function copyFamilyUrl() {
+  const url = buildShareUrl();
+  if (!url) return;
+  navigator.clipboard.writeText(url).then(() => {
+    const status = document.getElementById('family-share-status');
+    if (status) {
+      status.textContent = '✅ Link copiado';
+      status.style.color = 'var(--green)';
+    }
+  });
+}
+
+function shareFamilyUrl() {
+  const url = buildShareUrl();
+  if (!url) return;
+  const text = `Hola! Te paso el link de la lista de compras compartida:\n\n${url}\n\nAbrila en Safari y agregala a la pantalla de inicio para usarla como app.`;
+  if (navigator.share) {
+    navigator.share({ title: 'Lista de compras', text }).catch(() => {});
+  } else {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  }
+}
+
+function showFamilyQR() {
+  const url = buildShareUrl();
+  if (!url) return;
+  const container = document.getElementById('family-qr-canvas');
+  container.innerHTML = '<div style="color:var(--text-2);font-size:13px">Generando…</div>';
+  if (typeof QRCode === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+    script.onload = () => renderFamilyQR(url);
+    script.onerror = () => { container.innerHTML = '<div style="color:var(--red);font-size:12px">Sin conexión</div>'; };
+    document.body.appendChild(script);
+  } else {
+    renderFamilyQR(url);
+  }
+}
+
+function renderFamilyQR(url) {
+  const container = document.getElementById('family-qr-canvas');
+  container.innerHTML = '';
+  new QRCode(container, { text: url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
 }
 
 // ============ INIT ============
