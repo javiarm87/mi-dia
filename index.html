@@ -2645,6 +2645,9 @@ function renderWeightHistory() {
 }
 
 // ============ GITHUB GIST SYNC ============
+// Bypass directo del setItem original (sin disparar el hook de auto-sync)
+const _origSetItem = localStorage.setItem.bind(localStorage);
+
 function gistConfig() {
   return {
     token: localStorage.getItem('gistToken') || '',
@@ -2663,7 +2666,14 @@ function saveGistConfig() {
 
 function toggleAutosync(val) {
   localStorage.setItem('gistAutosync', val ? 'true' : 'false');
-  setGistStatus(val ? 'Auto-sync activado' : 'Auto-sync desactivado', 'gray');
+  if (val) {
+    setGistStatus('Auto-sync activado · subiendo…', 'blue');
+    // Marcar como dirty y disparar inmediatamente
+    _syncDirty = true;
+    triggerAutoSync();
+  } else {
+    setGistStatus('Auto-sync desactivado', 'gray');
+  }
 }
 
 function setGistStatus(msg, type) {
@@ -2709,7 +2719,10 @@ function applySnapshot(snap) {
 
 async function gistUpload(silent) {
   const cfg = gistConfig();
-  if (!cfg.token) { setGistStatus('Falta el token. Pegalo y guardá.', 'red'); return; }
+  if (!cfg.token) {
+    if (!silent) setGistStatus('Falta el token. Pegalo y guardá.', 'red');
+    throw new Error('Sin token');
+  }
   if (!silent) setGistStatus('Subiendo…', 'blue');
   const snap = buildSnapshot();
   const body = {
@@ -2739,15 +2752,17 @@ async function gistUpload(silent) {
     }
     const json = await res.json();
     if (!cfg.id && json.id) {
-      localStorage.setItem('gistId', json.id);
+      _origSetItem('gistId', json.id); // bypass hook (no dispara nuevo sync)
       const idInput = document.getElementById('gist-id');
       if (idInput) idInput.value = json.id;
     }
     const time = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
     if (!silent) setGistStatus(`✅ Backup OK (${time})`, 'green');
-    localStorage.setItem('lastGistUpload', new Date().toISOString());
+    _origSetItem('lastGistUpload', new Date().toISOString());
+    return json;
   } catch (e) {
     if (!silent) setGistStatus(`❌ ${e.message}`, 'red');
+    throw e; // propagar para que el caller decida
   }
 }
 
@@ -2780,26 +2795,87 @@ async function gistDownload() {
   }
 }
 
-function maybeAutoSync() {
+// ============ AUTO-SYNC con debounce + reintento ============
+let _syncDirty = false;
+let _syncTimer = null;
+let _syncInProgress = false;
+let _syncRetryCount = 0;
+const SYNC_DEBOUNCE_MS = 2000;
+const SYNC_MAX_RETRIES = 3;
+
+function scheduleSync() {
   const cfg = gistConfig();
-  if (cfg.auto && cfg.token) {
-    // Throttle: máximo 1 upload cada 30s
-    const last = parseInt(localStorage.getItem('_lastSyncAttempt') || '0', 10);
-    const now = Date.now();
-    if (now - last < 30000) return;
-    localStorage.setItem('_lastSyncAttempt', String(now));
-    gistUpload(true);
+  if (!cfg.auto || !cfg.token) return;
+  _syncDirty = true;
+  if (_syncTimer) clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(triggerAutoSync, SYNC_DEBOUNCE_MS);
+}
+
+async function triggerAutoSync() {
+  if (_syncInProgress) {
+    // Re-agendar si hay uno corriendo
+    _syncTimer = setTimeout(triggerAutoSync, 1500);
+    return;
+  }
+  if (!_syncDirty) return;
+
+  const cfg = gistConfig();
+  if (!cfg.auto || !cfg.token) {
+    _syncDirty = false;
+    return;
+  }
+
+  _syncInProgress = true;
+  const wasDirtyBeforeUpload = _syncDirty;
+  _syncDirty = false; // optimista
+
+  try {
+    await gistUpload(true);
+    _syncRetryCount = 0;
+    // Si llegaron más cambios mientras se subía, re-agendar
+    if (_syncDirty) {
+      _syncTimer = setTimeout(triggerAutoSync, 800);
+    }
+  } catch (e) {
+    // Falló: re-marcar dirty + reintento con backoff
+    _syncDirty = wasDirtyBeforeUpload;
+    _syncRetryCount++;
+    if (_syncRetryCount <= SYNC_MAX_RETRIES) {
+      const delay = Math.min(2000 * Math.pow(2, _syncRetryCount), 30000);
+      _syncTimer = setTimeout(triggerAutoSync, delay);
+    } else {
+      console.warn('Auto-sync falló después de varios reintentos:', e);
+      _syncRetryCount = 0;
+    }
+  } finally {
+    _syncInProgress = false;
   }
 }
 
-// Hook: cuando cambian datos, intentar auto-sync
-const _origSetItem = localStorage.setItem.bind(localStorage);
+// Forzar sync inmediato (sin debounce) — para visibilitychange / pagehide
+async function flushSync() {
+  if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
+  const cfg = gistConfig();
+  if (!cfg.auto || !cfg.token || !_syncDirty) return;
+  if (_syncInProgress) return;
+  await triggerAutoSync();
+}
+
+// Hook setItem (compatibilidad con maybeAutoSync viejo)
+function maybeAutoSync() { scheduleSync(); }
+
 localStorage.setItem = function(k, v) {
   _origSetItem(k, v);
   if (['tracker','compras','weights','habits'].includes(k)) {
-    maybeAutoSync();
+    scheduleSync();
   }
 };
+
+// Cuando la app pierde foco (cambias a otra app o cerrás Safari): forzar sync
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) flushSync();
+});
+window.addEventListener('pagehide', () => { flushSync(); });
 
 // Cargar config en el modal cuando se abre
 function loadGistConfigUI() {
