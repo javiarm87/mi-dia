@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -228,6 +229,8 @@ const GIST_ID = params.get('g') || params.get('gist');
 let snapshot = null;
 let comprasState = {};
 let comprasDef = null;
+let customItems = [];
+let hiddenItems = [];
 let currentScope = 'mensual';
 let onlyMissing = false;
 let pendingChanges = {};
@@ -282,6 +285,8 @@ async function loadFromGist() {
     snapshot = JSON.parse(content);
     comprasState = snapshot.compras || {};
     comprasDef = snapshot.comprasDef || DEFAULT_COMPRAS;
+    customItems = snapshot.customItems || [];
+    hiddenItems = snapshot.hiddenItems || [];
     document.getElementById('filters-area').style.display = 'block';
     renderList();
     setSyncStatus('ok');
@@ -348,13 +353,15 @@ async function pollGist() {
       ? await (await fetch(file.raw_url)).text()
       : file.content;
     const newSnap = JSON.parse(content);
-    // Solo actualizar si cambió y no tenemos cambios pendientes locales
-    const localStr = JSON.stringify(comprasState);
-    const remoteStr = JSON.stringify(newSnap.compras || {});
+    // Comparar todo lo relevante de compras
+    const localStr = JSON.stringify(comprasState) + JSON.stringify(customItems) + JSON.stringify(hiddenItems);
+    const remoteStr = JSON.stringify(newSnap.compras || {}) + JSON.stringify(newSnap.customItems || []) + JSON.stringify(newSnap.hiddenItems || []);
     if (localStr !== remoteStr && Object.keys(pendingChanges).length === 0) {
       snapshot = newSnap;
       comprasState = newSnap.compras || {};
       if (newSnap.comprasDef) comprasDef = newSnap.comprasDef;
+      customItems = newSnap.customItems || [];
+      hiddenItems = newSnap.hiddenItems || [];
       renderList();
     }
   } catch (e) { /* ignorar errores de polling */ }
@@ -369,18 +376,31 @@ function buildAllItems() {
     comprasDef[scope].forEach(g => {
       g.items.forEach(([nombre, cant]) => {
         if (seen.has(nombre)) return;
+        if (hiddenItems.includes(nombre)) return;
         seen.add(nombre);
         if (!groups[g.cat]) groups[g.cat] = [];
         groups[g.cat].push([nombre, cant]);
       });
     });
   });
-  return Object.keys(groups).map(cat => ({ cat, items: groups[cat] }));
+  const result = Object.keys(groups).map(cat => ({ cat, items: groups[cat] }));
+  // Categoría Extra con items custom
+  if (customItems.length > 0) {
+    result.push({
+      cat: 'Extra',
+      items: customItems.map(it => [it.nombre, it.cant || ''])
+    });
+  }
+  return result;
 }
 
 function getGroups() {
   if (currentScope === 'todos') return buildAllItems();
-  return comprasDef[currentScope] || [];
+  const base = comprasDef[currentScope] || [];
+  return base.map(g => ({
+    cat: g.cat,
+    items: g.items.filter(([nombre]) => !hiddenItems.includes(nombre))
+  }));
 }
 
 function renderList() {
