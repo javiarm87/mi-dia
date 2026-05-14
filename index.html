@@ -384,6 +384,68 @@
     margin-bottom: 6px;
   }
 
+  .add-item-card {
+    display: flex;
+    gap: 6px;
+    background: var(--card);
+    padding: 8px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+  .add-item-card input {
+    border: 1px solid var(--separator);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    background: var(--bg);
+    box-sizing: border-box;
+  }
+  .add-item-card #new-item-name { flex: 1; min-width: 0; }
+  .add-item-card #new-item-qty { width: 64px; flex-shrink: 0; }
+  .add-item-card button {
+    border: none;
+    background: var(--blue);
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+    width: 40px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .item-action {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    line-height: 1;
+  }
+  .item-action.del { background: #FFE5E5; color: var(--red); }
+  .item-action.hide { color: var(--text-2); }
+
+  .time-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+  }
+  .time-cell {
+    border: none;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 8px 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    text-align: center;
+  }
+  .time-cell.selected {
+    background: var(--blue);
+    color: white;
+  }
+
   /* Buttons */
   .reset-btn {
     width: 100%;
@@ -580,7 +642,7 @@
   /* Fix overflow global */
   input, select, button, textarea { box-sizing: border-box; }
   .view * { max-width: 100%; }
-  .chart-card svg, #weight-chart svg, #chart-trend svg, #chart-weekday svg, #chart-correl svg {
+  .chart-card svg, #weight-chart svg, #chart-trend svg, #chart-weekday svg, #chart-correl svg, #chart-meal svg {
     width: 100%;
     height: auto;
     display: block;
@@ -627,6 +689,18 @@
           <button class="h-btn" onclick="setFood('bad')">Mal</button>
         </div>
       </div>
+    </div>
+
+    <div class="card-title">Primera comida</div>
+    <div class="card" style="padding:14px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="row-left">
+          <div class="row-icon" style="background:#E0F5E5;color:var(--green)">⏰</div>
+          <div class="row-text">Hora de la primera comida</div>
+        </div>
+        <div id="first-meal-display" style="font-size:16px;font-weight:600;color:var(--blue)">—</div>
+      </div>
+      <div id="first-meal-grid" class="time-grid"></div>
     </div>
   </div>
 
@@ -772,6 +846,20 @@
       </div>
     </div>
 
+    <div class="chart-card">
+      <div class="chart-title">⏰ Horario de primera comida</div>
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        <button class="chip chip-meal active" onclick="setMealChartRange(5, this)" style="flex:1;padding:7px 2px;font-size:12px">5 días</button>
+        <button class="chip chip-meal" onclick="setMealChartRange(10, this)" style="flex:1;padding:7px 2px;font-size:12px">10</button>
+        <button class="chip chip-meal" onclick="setMealChartRange(20, this)" style="flex:1;padding:7px 2px;font-size:12px">20</button>
+        <button class="chip chip-meal" onclick="setMealChartRange(30, this)" style="flex:1;padding:7px 2px;font-size:12px">30</button>
+      </div>
+      <div id="chart-meal"></div>
+      <div style="font-size:11px;color:var(--text-2);margin-top:8px;text-align:center">
+        Más verde = comiste más tarde (mejor). Más rojo = más temprano.
+      </div>
+    </div>
+
     <button class="secondary-btn" onclick="exportData()" style="margin-top:16px">📥 Descargar mis datos</button>
   </div>
 
@@ -909,6 +997,14 @@
             Generá un link para tu pareja o familia. Solo verán las compras y podrán marcar/desmarcar, sincronizado con tu Gist en tiempo real.
           </div>
           <button class="secondary-btn" style="margin:0;width:100%" onclick="showFamilyShareModal()">👨‍👩‍👧 Compartir lista de compras</button>
+        </div>
+
+        <div class="settings-section" style="margin-top:8px">Items ocultos de compras</div>
+        <div style="padding: 4px 16px 12px">
+          <div style="font-size:13px;color:var(--text-2);margin-bottom:8px;line-height:1.4">
+            Items del menú que ocultaste de la lista. Tocá Restaurar para que vuelvan a aparecer.
+          </div>
+          <div id="hidden-items-list"></div>
         </div>
 
         <div class="settings-section" style="margin-top:8px">Datos</div>
@@ -1155,6 +1251,8 @@ function setCompra(id, value) {
   localStorage.setItem('compras', JSON.stringify(data));
 }
 
+function isItemHidden(nombre) { return getHiddenItems().includes(nombre); }
+
 // Compute day score & count based on configured habits
 function computeDayMetrics(day) {
   const habits = getHabits();
@@ -1209,6 +1307,44 @@ function renderHoy() {
   const foodToggle = document.getElementById('food-toggle');
   foodToggle.children[0].className = 'h-btn' + (day.food === 'good' ? ' active-good' : '');
   foodToggle.children[1].className = 'h-btn' + (day.food === 'bad' ? ' active-bad' : '');
+
+  renderFirstMealGrid(day);
+}
+
+// Genera slots de 06:00 a 19:00 cada 30 min
+function getMealTimeSlots() {
+  const slots = [];
+  for (let h = 6; h <= 19; h++) {
+    slots.push(`${String(h).padStart(2,'0')}:00`);
+    if (h < 19) slots.push(`${String(h).padStart(2,'0')}:30`);
+  }
+  return slots;
+}
+
+function renderFirstMealGrid(day) {
+  const grid = document.getElementById('first-meal-grid');
+  const display = document.getElementById('first-meal-display');
+  if (!grid) return;
+  const slots = getMealTimeSlots();
+  const current = day.firstMeal || null;
+  display.textContent = current || '—';
+  grid.innerHTML = slots.map(s =>
+    `<button class="time-cell ${s === current ? 'selected' : ''}" onclick="setFirstMeal('${s}')">${s}</button>`
+  ).join('');
+}
+
+function setFirstMeal(time) {
+  const data = getTracker();
+  const k = dateKey(currentDate);
+  if (!data[k]) data[k] = {};
+  // Si tocás el mismo, lo desmarca
+  if (data[k].firstMeal === time) {
+    delete data[k].firstMeal;
+  } else {
+    data[k].firstMeal = time;
+  }
+  saveTracker(data);
+  renderFirstMealGrid(data[k] || {});
 }
 
 function toggleHabit(id) {
@@ -1289,29 +1425,112 @@ function filterMenu(opt, btn) {
 }
 
 // ============ COMPRAS ============
+function getCustomItems() {
+  // [{nombre, cant}]
+  return JSON.parse(localStorage.getItem('customItems') || '[]');
+}
+function saveCustomItems(arr) {
+  localStorage.setItem('customItems', JSON.stringify(arr));
+}
+function getHiddenItems() {
+  // array de nombres ocultos
+  return JSON.parse(localStorage.getItem('hiddenItems') || '[]');
+}
+function saveHiddenItems(arr) {
+  localStorage.setItem('hiddenItems', JSON.stringify(arr));
+}
+
 function buildAllItems() {
-  // Combina todos los items únicos de mensual + semanaA + semanaB en una sola lista
-  // Manteniendo categorías
+  // Combina todos los items únicos de mensual + semanaA + semanaB
+  // + categoría "Extra" con items custom. Excluye ocultos.
+  const hidden = getHiddenItems();
   const seen = new Set();
   const groups = {};
   ['mensual','semanaA','semanaB'].forEach(scope => {
     COMPRAS[scope].forEach(g => {
       g.items.forEach(([nombre, cant]) => {
         if (seen.has(nombre)) return;
+        if (hidden.includes(nombre)) return;
         seen.add(nombre);
         if (!groups[g.cat]) groups[g.cat] = [];
         groups[g.cat].push([nombre, cant]);
       });
     });
   });
-  return Object.keys(groups).map(cat => ({ cat, items: groups[cat] }));
+  const result = Object.keys(groups).map(cat => ({ cat, items: groups[cat] }));
+  // Categoría Extra con custom items
+  const custom = getCustomItems();
+  if (custom.length > 0) {
+    result.push({
+      cat: 'Extra',
+      items: custom.map(it => [it.nombre, it.cant || '']),
+      isExtra: true
+    });
+  }
+  return result;
 }
 
 function getComprasGroups() {
   if (currentCompras === 'todos') {
     return buildAllItems();
   }
-  return COMPRAS[currentCompras];
+  // Otras vistas también excluyen ocultos
+  const hidden = getHiddenItems();
+  return COMPRAS[currentCompras].map(g => ({
+    cat: g.cat,
+    items: g.items.filter(([nombre]) => !hidden.includes(nombre))
+  }));
+}
+
+function addCustomItem() {
+  const nombreInput = document.getElementById('new-item-name');
+  const cantInput = document.getElementById('new-item-qty');
+  const nombre = (nombreInput.value || '').trim();
+  const cant = (cantInput.value || '').trim();
+  if (!nombre) { alert('Escribí el nombre del item'); return; }
+
+  const custom = getCustomItems();
+  // Evitar duplicados
+  if (custom.some(it => it.nombre.toLowerCase() === nombre.toLowerCase())) {
+    alert('Ese item ya está en la lista');
+    return;
+  }
+  custom.push({ nombre, cant });
+  saveCustomItems(custom);
+  nombreInput.value = '';
+  cantInput.value = '';
+  renderCompras();
+}
+
+function removeCustomItem(nombre) {
+  const custom = getCustomItems();
+  const filtered = custom.filter(it => it.nombre !== nombre);
+  saveCustomItems(filtered);
+  // También limpiar su estado de marcado
+  const compras = getCompras();
+  delete compras[nombre];
+  localStorage.setItem('compras', JSON.stringify(compras));
+  renderCompras();
+}
+
+function hideMenuItem(nombre) {
+  if (!confirm(`¿Ocultar "${nombre}" de la lista? Podés restaurarlo desde ⚙️ Ajustes.`)) return;
+  const hidden = getHiddenItems();
+  if (!hidden.includes(nombre)) {
+    hidden.push(nombre);
+    saveHiddenItems(hidden);
+  }
+  const compras = getCompras();
+  delete compras[nombre];
+  localStorage.setItem('compras', JSON.stringify(compras));
+  renderCompras();
+}
+
+function restoreHiddenItem(nombre) {
+  const hidden = getHiddenItems();
+  saveHiddenItems(hidden.filter(n => n !== nombre));
+  renderSettings();
+  renderCompras();
 }
 
 function renderCompras() {
@@ -1319,9 +1538,22 @@ function renderCompras() {
   const compras = getCompras();
   const groups = getComprasGroups();
   const showOnlyMissing = onlyMissing;
+  const isTodos = currentCompras === 'todos';
   let total = 0, done = 0;
 
   let html = '';
+
+  // Input para agregar item nuevo (solo en Todos)
+  if (isTodos) {
+    html += `
+      <div class="add-item-card">
+        <input type="text" id="new-item-name" placeholder="Agregar item…" autocomplete="off">
+        <input type="text" id="new-item-qty" placeholder="Cant." autocomplete="off">
+        <button onclick="addCustomItem()">+</button>
+      </div>
+    `;
+  }
+
   groups.forEach(g => {
     const filtered = g.items.filter(([nombre]) => {
       total++;
@@ -1332,14 +1564,25 @@ function renderCompras() {
     html += `<div class="card-title">${g.cat}</div><div class="card">`;
     filtered.forEach(([nombre, cant]) => {
       const checked = !!compras[nombre];
+      const safeName = nombre.replace(/'/g, "\\'");
+      // Botón de acción: eliminar (si es custom/Extra) u ocultar (si es del menú)
+      let actionBtn = '';
+      if (isTodos) {
+        if (g.isExtra) {
+          actionBtn = `<button class="item-action del" onclick="event.stopPropagation();removeCustomItem('${safeName}')">🗑</button>`;
+        } else {
+          actionBtn = `<button class="item-action hide" onclick="event.stopPropagation();hideMenuItem('${safeName}')">✕</button>`;
+        }
+      }
       html += `
-        <div class="row" onclick="toggleCompra('${nombre.replace(/'/g, "\\'")}')">
+        <div class="row" onclick="toggleCompra('${safeName}')">
           <div class="row-left">
             <div class="row-text ${checked ? 'checked' : ''}">${nombre}</div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px">
             <div class="row-detail" style="margin:0">${cant}</div>
             <div class="check ${checked ? 'on' : ''}"></div>
+            ${actionBtn}
           </div>
         </div>
       `;
@@ -1347,10 +1590,10 @@ function renderCompras() {
     html += `</div>`;
   });
 
-  if (showOnlyMissing && html === '') {
-    html = '<div class="empty">✅ ¡Nada por comprar acá!</div>';
-  } else if (html === '') {
-    html = '<div class="empty">No hay items.</div>';
+  if (showOnlyMissing && total - done === 0) {
+    html += '<div class="empty">✅ ¡Nada por comprar acá!</div>';
+  } else if (total === 0) {
+    html += '<div class="empty">No hay items.</div>';
   }
 
   c.innerHTML = html;
@@ -1878,6 +2121,7 @@ function renderAnalisis() {
   renderTrendChart();
   renderWeekdayChart();
   renderCorrelChart();
+  renderMealChart();
 }
 
 function renderTrendChart() {
@@ -2050,6 +2294,146 @@ function renderCorrelChart() {
   document.getElementById('chart-correl').innerHTML = html;
 }
 
+// ============ MEAL TIME CHART ============
+let mealChartRange = 5;
+
+function setMealChartRange(n, btn) {
+  mealChartRange = n;
+  document.querySelectorAll('.chip-meal').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  renderMealChart();
+}
+
+// Convierte "HH:MM" a minutos desde medianoche
+function timeToMinutes(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Color verde (tarde/mejor) a rojo (temprano) según hora dentro del rango 06:00-19:00
+function mealColor(minutes) {
+  const min = 6 * 60;   // 06:00
+  const max = 19 * 60;  // 19:00
+  let pct = (minutes - min) / (max - min);
+  pct = Math.max(0, Math.min(1, pct));
+  // rojo (0) -> amarillo (0.5) -> verde (1)
+  let r, g;
+  if (pct < 0.5) {
+    r = 255;
+    g = Math.round(pct * 2 * 200);
+  } else {
+    r = Math.round((1 - (pct - 0.5) * 2) * 255);
+    g = 200;
+  }
+  return `rgb(${r},${g},60)`;
+}
+
+function renderMealChart() {
+  const container = document.getElementById('chart-meal');
+  if (!container) return;
+  const data = getTracker();
+
+  // Recolectar últimos N días que tengan firstMeal
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  for (let i = 0; i < mealChartRange; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const k = dateKey(d);
+    const day = data[k];
+    days.push({
+      date: d,
+      key: k,
+      firstMeal: day && day.firstMeal ? day.firstMeal : null
+    });
+  }
+  days.reverse(); // más viejo a la izquierda
+
+  const withData = days.filter(d => d.firstMeal);
+  if (withData.length === 0) {
+    container.innerHTML = '<div class="empty">Sin registros de primera comida todavía.<br>Cargalos en la pantalla Hoy.</div>';
+    return;
+  }
+
+  // Promedio
+  const avgMin = withData.reduce((s, d) => s + timeToMinutes(d.firstMeal), 0) / withData.length;
+  const avgH = Math.floor(avgMin / 60);
+  const avgM = Math.round(avgMin % 60);
+  const avgLabel = `${String(avgH).padStart(2,'0')}:${String(avgM).padStart(2,'0')}`;
+
+  // Dimensiones del SVG
+  const W = 320, H = 200;
+  const padL = 38, padR = 10, padT = 10, padB = 30;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const yMin = 6 * 60;   // 06:00
+  const yMax = 19 * 60;  // 19:00
+  const yRange = yMax - yMin;
+
+  const barGap = 6;
+  const barW = Math.min(38, (chartW - barGap * (days.length - 1)) / days.length);
+  const totalBarsW = barW * days.length + barGap * (days.length - 1);
+  const startX = padL + (chartW - totalBarsW) / 2;
+
+  const yToPx = (min) => padT + chartH - ((min - yMin) / yRange) * chartH;
+
+  // Grilla horizontal cada 2 horas
+  let grid = '';
+  for (let h = 6; h <= 19; h += 2) {
+    const y = yToPx(h * 60);
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" stroke="#E5E5EA" stroke-width="1"/>`;
+    grid += `<text x="${padL - 5}" y="${(y + 3).toFixed(1)}" font-size="9" fill="#8E8E93" text-anchor="end">${String(h).padStart(2,'0')}h</text>`;
+  }
+
+  // Línea de promedio
+  const avgY = yToPx(avgMin);
+  const avgLine = `
+    <line x1="${padL}" y1="${avgY.toFixed(1)}" x2="${W - padR}" y2="${avgY.toFixed(1)}"
+          stroke="#007AFF" stroke-width="1.5" stroke-dasharray="4,3"/>
+    <text x="${W - padR}" y="${(avgY - 4).toFixed(1)}" font-size="9" fill="#007AFF" text-anchor="end" font-weight="600">prom ${avgLabel}</text>
+  `;
+
+  // Barras
+  let bars = '';
+  days.forEach((d, i) => {
+    const x = startX + i * (barW + barGap);
+    const dayLabel = d.date.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' });
+    if (!d.firstMeal) {
+      // Sin dato: barra fantasma
+      bars += `
+        <rect x="${x.toFixed(1)}" y="${padT}" width="${barW.toFixed(1)}" height="${chartH}"
+              fill="#F2F2F7" rx="3"/>
+        <text x="${(x + barW/2).toFixed(1)}" y="${H - padB + 12}" font-size="8" fill="#C7C7CC" text-anchor="middle">${dayLabel}</text>
+      `;
+      return;
+    }
+    const min = timeToMinutes(d.firstMeal);
+    const barTop = yToPx(min);
+    const barH = padT + chartH - barTop;
+    const color = mealColor(min);
+    bars += `
+      <rect x="${x.toFixed(1)}" y="${barTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}"
+            fill="${color}" rx="3">
+        <title>${dayLabel}: ${d.firstMeal}</title>
+      </rect>
+      <text x="${(x + barW/2).toFixed(1)}" y="${(barTop - 4).toFixed(1)}" font-size="8.5" fill="#3C3C43" text-anchor="middle" font-weight="600">${d.firstMeal}</text>
+      <text x="${(x + barW/2).toFixed(1)}" y="${H - padB + 12}" font-size="8" fill="#8E8E93" text-anchor="middle">${dayLabel}</text>
+    `;
+  });
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+      ${grid}
+      ${bars}
+      ${avgLine}
+    </svg>
+    <div style="text-align:center;font-size:13px;color:var(--text-2);margin-top:6px">
+      Promedio del período: <strong style="color:var(--blue)">${avgLabel}</strong>
+      · ${withData.length}/${days.length} días con registro
+    </div>
+  `;
+}
+
 // ============ DAY MODAL ============
 function showDayDetail(dateStr) {
   const data = getTracker();
@@ -2086,8 +2470,18 @@ function showDayDetail(dateStr) {
     `;
   }).join('');
 
+  const firstMealRow = day.firstMeal
+    ? `<div class="modal-row">
+         <div class="modal-row-left">
+           <div class="modal-row-icon" style="background:#E0F5E5;color:#34C759">⏰</div>
+           <div>Primera comida</div>
+         </div>
+         <div class="modal-status"><span style="font-size:15px;font-weight:600;color:var(--blue)">${day.firstMeal}</span></div>
+       </div>`
+    : '';
+
   document.getElementById('day-modal-body').innerHTML =
-    rows +
+    rows + firstMealRow +
     `<div class="modal-summary">Cumplimiento: <strong>${m_.count}/${m_.total}</strong> · <strong>${m_.score} pts</strong></div>` +
     `<div style="padding:12px 16px;border-top:0.5px solid var(--separator)">
        <button class="primary-btn" onclick="editDay('${dateStr}')">✏️ Editar este día</button>
@@ -2294,6 +2688,24 @@ function renderSettings() {
     status.className = 'weight-warning';
     status.textContent = `⚠️ Pesos suman ${totalW} (deben sumar 100)`;
   }
+
+  renderHiddenItemsSettings();
+}
+
+function renderHiddenItemsSettings() {
+  const cont = document.getElementById('hidden-items-list');
+  if (!cont) return;
+  const hidden = getHiddenItems();
+  if (hidden.length === 0) {
+    cont.innerHTML = '<div style="font-size:13px;color:var(--text-2);padding:4px 0">No hay items ocultos.</div>';
+    return;
+  }
+  cont.innerHTML = hidden.map(nombre => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid var(--separator)">
+      <span style="font-size:14px">${nombre}</span>
+      <button class="secondary-btn" style="margin:0;padding:5px 12px;font-size:13px;width:auto" onclick="restoreHiddenItem('${nombre.replace(/'/g, "\\'")}')">Restaurar</button>
+    </div>
+  `).join('');
 }
 
 function updateHabit(i, field, val) {
@@ -2359,7 +2771,7 @@ function exportData() {
 
   // CSV en INGLÉS
   const checkHabits = getCheckHabits();
-  const headerRow = ['date', 'weekday', 'food'];
+  const headerRow = ['date', 'weekday', 'food', 'first_meal'];
   checkHabits.forEach(h => headerRow.push(h.id));
   headerRow.push('count_done', 'score', 'max_score', 'score_pct');
   const rows = [headerRow];
@@ -2371,7 +2783,7 @@ function exportData() {
     const dowEn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][date.getDay()];
     const food = day.food === 'good' ? 'good' : day.food === 'bad' ? 'bad' : '';
     const metrics = computeDayMetrics(day);
-    const row = [k, dowEn, food];
+    const row = [k, dowEn, food, day.firstMeal || ''];
     checkHabits.forEach(h => row.push(day[h.id] ? '1' : '0'));
     row.push(metrics.count, metrics.score, metrics.max, metrics.max > 0 ? Math.round(metrics.pctScore) : 0);
     rows.push(row);
@@ -2694,6 +3106,8 @@ function buildSnapshot() {
     tracker: getTracker(),
     compras: getCompras(),
     comprasDef: COMPRAS,
+    customItems: getCustomItems(),
+    hiddenItems: getHiddenItems(),
     weights: getWeights(),
     habits: getHabits(),
     settings: {
@@ -2708,6 +3122,8 @@ function applySnapshot(snap) {
   if (!snap || typeof snap !== 'object') throw new Error('Snapshot inválido');
   if (snap.tracker) localStorage.setItem('tracker', JSON.stringify(snap.tracker));
   if (snap.compras) localStorage.setItem('compras', JSON.stringify(snap.compras));
+  if (snap.customItems) localStorage.setItem('customItems', JSON.stringify(snap.customItems));
+  if (snap.hiddenItems) localStorage.setItem('hiddenItems', JSON.stringify(snap.hiddenItems));
   if (snap.weights) localStorage.setItem('weights', JSON.stringify(snap.weights));
   if (snap.habits) localStorage.setItem('habits', JSON.stringify(snap.habits));
   if (snap.settings) {
