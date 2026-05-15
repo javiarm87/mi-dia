@@ -33,7 +33,7 @@
     height: 100%;
   }
   body {
-    padding-bottom: calc(160px + env(safe-area-inset-bottom));
+    padding-bottom: calc(200px + env(safe-area-inset-bottom));
     padding-top: env(safe-area-inset-top);
   }
   .app { max-width: 640px; margin: 0 auto; min-height: 100vh; }
@@ -383,6 +383,40 @@
     border-radius: 12px;
     margin-bottom: 6px;
   }
+  .search-box {
+    display: flex;
+    align-items: center;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 0 10px;
+    margin-bottom: 6px;
+    gap: 6px;
+  }
+  .search-box .search-icon { color: var(--text-2); font-size: 14px; }
+  .search-box input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 0;
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    min-width: 0;
+  }
+  .search-clear {
+    border: none;
+    background: var(--bg);
+    color: var(--text-2);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    padding: 0;
+  }
 
   .add-item-card {
     display: flex;
@@ -642,7 +676,7 @@
   /* Fix overflow global */
   input, select, button, textarea { box-sizing: border-box; }
   .view * { max-width: 100%; }
-  .chart-card svg, #weight-chart svg, #chart-trend svg, #chart-weekday svg, #chart-correl svg, #chart-meal svg {
+  .chart-card svg, #weight-chart svg, #chart-trend svg, #chart-weekday svg, #chart-meal svg {
     width: 100%;
     height: auto;
     display: block;
@@ -737,6 +771,11 @@
       <button class="chip" onclick="filterCompras('semanaB', this)">Opción B</button>
       <button class="chip" onclick="filterCompras('todos', this)">Todos</button>
     </div>
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="compras-search" placeholder="Buscar item…" autocomplete="off" oninput="onSearchInput(this.value)">
+      <button class="search-clear" id="compras-search-clear" onclick="clearSearch()" style="display:none">✕</button>
+    </div>
     <label class="missing-toggle">
       <span style="font-size:14px;font-weight:500">Solo faltantes</span>
       <span class="switch">
@@ -749,7 +788,7 @@
       <button class="secondary-btn" style="margin:0" onclick="shareShoppingList()">📲 Compartir</button>
       <button class="secondary-btn" style="margin:0" onclick="copyShoppingList()">📋 Copiar</button>
     </div>
-    <button class="reset-btn" onclick="resetCompras()">Desmarcar todo</button>
+    <button class="reset-btn" onclick="resetCompras()" style="margin-bottom:32px">Desmarcar todo</button>
   </div>
 
   <!-- STATS -->
@@ -839,20 +878,14 @@
     </div>
 
     <div class="chart-card">
-      <div class="chart-title">🔗 Correlaciones entre hábitos</div>
-      <div id="chart-correl"></div>
-      <div style="font-size:11px;color:var(--text-2);margin-top:8px;text-align:center">
-        % de días donde si cumpliste el de la fila, también cumpliste el de la columna
-      </div>
-    </div>
-
-    <div class="chart-card">
       <div class="chart-title">⏰ Horario de primera comida</div>
-      <div style="display:flex;gap:4px;margin-bottom:10px">
-        <button class="chip chip-meal active" onclick="setMealChartRange(5, this)" style="flex:1;padding:7px 2px;font-size:12px">5 días</button>
-        <button class="chip chip-meal" onclick="setMealChartRange(10, this)" style="flex:1;padding:7px 2px;font-size:12px">10</button>
-        <button class="chip chip-meal" onclick="setMealChartRange(20, this)" style="flex:1;padding:7px 2px;font-size:12px">20</button>
-        <button class="chip chip-meal" onclick="setMealChartRange(30, this)" style="flex:1;padding:7px 2px;font-size:12px">30</button>
+      <div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="chip chip-meal active" onclick="setMealChartRange(5, this)" style="flex:1;padding:7px 2px;font-size:11px;min-width:40px">5 d</button>
+        <button class="chip chip-meal" onclick="setMealChartRange(10, this)" style="flex:1;padding:7px 2px;font-size:11px;min-width:40px">10 d</button>
+        <button class="chip chip-meal" onclick="setMealChartRange(30, this)" style="flex:1;padding:7px 2px;font-size:11px;min-width:40px">1 m</button>
+        <button class="chip chip-meal" onclick="setMealChartRange(90, this)" style="flex:1;padding:7px 2px;font-size:11px;min-width:40px">3 m</button>
+        <button class="chip chip-meal" onclick="setMealChartRange(180, this)" style="flex:1;padding:7px 2px;font-size:11px;min-width:40px">6 m</button>
+        <button class="chip chip-meal" onclick="setMealChartRange(365, this)" style="flex:1;padding:7px 2px;font-size:11px;min-width:40px">1 a</button>
       </div>
       <div id="chart-meal"></div>
       <div style="font-size:11px;color:var(--text-2);margin-top:8px;text-align:center">
@@ -860,7 +893,7 @@
       </div>
     </div>
 
-    <button class="secondary-btn" onclick="exportData()" style="margin-top:16px">📥 Descargar mis datos</button>
+    <button class="secondary-btn" onclick="exportData()" style="margin-top:16px;margin-bottom:24px">📥 Descargar mis datos</button>
   </div>
 
   <!-- PESAJES -->
@@ -1224,6 +1257,7 @@ currentDate.setHours(0,0,0,0);
 let currentMenu = 'A';
 let currentCompras = 'mensual';
 let onlyMissing = false;
+let searchQuery = '';
 
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const WEEKDAYS_ES = ['L','M','M','J','V','S','D'];
@@ -1558,7 +1592,9 @@ function renderCompras() {
     const filtered = g.items.filter(([nombre]) => {
       total++;
       if (compras[nombre]) done++;
-      return showOnlyMissing ? !compras[nombre] : true;
+      if (showOnlyMissing && compras[nombre]) return false;
+      if (searchQuery && !nombre.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
     });
     if (filtered.length === 0) return;
     html += `<div class="card-title">${g.cat}</div><div class="card">`;
@@ -1618,6 +1654,22 @@ function filterCompras(opt, btn) {
 
 function toggleOnlyMissing(val) {
   onlyMissing = val;
+  renderCompras();
+}
+
+function onSearchInput(val) {
+  searchQuery = val || '';
+  const clr = document.getElementById('compras-search-clear');
+  if (clr) clr.style.display = searchQuery ? 'flex' : 'none';
+  renderCompras();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  const input = document.getElementById('compras-search');
+  if (input) input.value = '';
+  const clr = document.getElementById('compras-search-clear');
+  if (clr) clr.style.display = 'none';
   renderCompras();
 }
 
@@ -2120,7 +2172,6 @@ function renderDetCalendar() {
 function renderAnalisis() {
   renderTrendChart();
   renderWeekdayChart();
-  renderCorrelChart();
   renderMealChart();
 }
 
@@ -2333,47 +2384,67 @@ function renderMealChart() {
   if (!container) return;
   const data = getTracker();
 
-  // Recolectar últimos N días que tengan firstMeal
+  // Recolectar todos los días del rango
   const today = new Date(); today.setHours(0,0,0,0);
-  const days = [];
+  const rawDays = [];
   for (let i = 0; i < mealChartRange; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const k = dateKey(d);
     const day = data[k];
-    days.push({
+    rawDays.push({
       date: d,
       key: k,
-      firstMeal: day && day.firstMeal ? day.firstMeal : null
+      minutes: day && day.firstMeal ? timeToMinutes(day.firstMeal) : null
     });
   }
-  days.reverse(); // más viejo a la izquierda
+  rawDays.reverse(); // más viejo a la izquierda
 
-  const withData = days.filter(d => d.firstMeal);
+  const withData = rawDays.filter(d => d.minutes !== null);
   if (withData.length === 0) {
     container.innerHTML = '<div class="empty">Sin registros de primera comida todavía.<br>Cargalos en la pantalla Hoy.</div>';
     return;
   }
 
-  // Promedio
-  const avgMin = withData.reduce((s, d) => s + timeToMinutes(d.firstMeal), 0) / withData.length;
+  // Promedio general
+  const avgMin = withData.reduce((s, d) => s + d.minutes, 0) / withData.length;
   const avgH = Math.floor(avgMin / 60);
   const avgM = Math.round(avgMin % 60);
   const avgLabel = `${String(avgH).padStart(2,'0')}:${String(avgM).padStart(2,'0')}`;
 
-  // Dimensiones del SVG
+  // Si son muchos días, agrupar en buckets. Target: ~14-20 barras max.
+  const TARGET_BARS = 16;
+  const bucketSize = Math.max(1, Math.ceil(rawDays.length / TARGET_BARS));
+  const buckets = [];
+  for (let i = 0; i < rawDays.length; i += bucketSize) {
+    const slice = rawDays.slice(i, i + bucketSize);
+    const valid = slice.filter(d => d.minutes !== null);
+    const avg = valid.length > 0
+      ? valid.reduce((s, d) => s + d.minutes, 0) / valid.length
+      : null;
+    buckets.push({
+      start: slice[0].date,
+      end: slice[slice.length - 1].date,
+      minutes: avg,
+      isBucket: bucketSize > 1,
+      count: valid.length,
+      total: slice.length
+    });
+  }
+
+  // Dimensiones del SVG (ancho dinámico si hay muchas barras)
   const W = 320, H = 200;
-  const padL = 38, padR = 10, padT = 10, padB = 30;
+  const padL = 38, padR = 10, padT = 14, padB = 30;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
-  const yMin = 6 * 60;   // 06:00
-  const yMax = 19 * 60;  // 19:00
+  const yMin = 6 * 60;
+  const yMax = 19 * 60;
   const yRange = yMax - yMin;
 
-  const barGap = 6;
-  const barW = Math.min(38, (chartW - barGap * (days.length - 1)) / days.length);
-  const totalBarsW = barW * days.length + barGap * (days.length - 1);
-  const startX = padL + (chartW - totalBarsW) / 2;
+  const nBars = buckets.length;
+  const barGap = nBars > 20 ? 1.5 : (nBars > 10 ? 3 : 6);
+  const barW = (chartW - barGap * (nBars - 1)) / nBars;
+  const startX = padL;
 
   const yToPx = (min) => padT + chartH - ((min - yMin) / yRange) * chartH;
 
@@ -2393,33 +2464,68 @@ function renderMealChart() {
     <text x="${W - padR}" y="${(avgY - 4).toFixed(1)}" font-size="9" fill="#007AFF" text-anchor="end" font-weight="600">prom ${avgLabel}</text>
   `;
 
+  // Función para formato de label X según rango
+  const formatBucketLabel = (b) => {
+    if (!b.isBucket) {
+      return b.start.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' });
+    }
+    // Bucket: mostrar fecha de inicio
+    if (mealChartRange >= 180) {
+      // Para rangos largos, mostrar mes
+      return b.start.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '');
+    }
+    return b.start.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' });
+  };
+
+  // Decidir cuántas labels mostrar para que no se amontonen
+  const labelEvery = nBars <= 8 ? 1 : (nBars <= 16 ? 2 : Math.ceil(nBars / 6));
+
   // Barras
   let bars = '';
-  days.forEach((d, i) => {
+  buckets.forEach((b, i) => {
     const x = startX + i * (barW + barGap);
-    const dayLabel = d.date.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' });
-    if (!d.firstMeal) {
-      // Sin dato: barra fantasma
+    const label = formatBucketLabel(b);
+    const showLabel = (i === 0) || (i === nBars - 1) || (i % labelEvery === 0);
+
+    if (b.minutes === null) {
       bars += `
         <rect x="${x.toFixed(1)}" y="${padT}" width="${barW.toFixed(1)}" height="${chartH}"
-              fill="#F2F2F7" rx="3"/>
-        <text x="${(x + barW/2).toFixed(1)}" y="${H - padB + 12}" font-size="8" fill="#C7C7CC" text-anchor="middle">${dayLabel}</text>
+              fill="#F2F2F7" rx="2"/>
       `;
+      if (showLabel) {
+        bars += `<text x="${(x + barW/2).toFixed(1)}" y="${H - padB + 12}" font-size="8" fill="#C7C7CC" text-anchor="middle">${label}</text>`;
+      }
       return;
     }
-    const min = timeToMinutes(d.firstMeal);
+    const min = b.minutes;
     const barTop = yToPx(min);
     const barH = padT + chartH - barTop;
     const color = mealColor(min);
+    const h = Math.floor(min / 60);
+    const m = Math.round(min % 60);
+    const timeLabel = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    const tooltip = b.isBucket
+      ? `${label}: prom ${timeLabel} (${b.count}/${b.total} días)`
+      : `${label}: ${timeLabel}`;
+
     bars += `
       <rect x="${x.toFixed(1)}" y="${barTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${barH.toFixed(1)}"
-            fill="${color}" rx="3">
-        <title>${dayLabel}: ${d.firstMeal}</title>
+            fill="${color}" rx="2">
+        <title>${tooltip}</title>
       </rect>
-      <text x="${(x + barW/2).toFixed(1)}" y="${(barTop - 4).toFixed(1)}" font-size="8.5" fill="#3C3C43" text-anchor="middle" font-weight="600">${d.firstMeal}</text>
-      <text x="${(x + barW/2).toFixed(1)}" y="${H - padB + 12}" font-size="8" fill="#8E8E93" text-anchor="middle">${dayLabel}</text>
     `;
+    // Solo mostrar el horario sobre la barra si hay pocas barras
+    if (nBars <= 10) {
+      bars += `<text x="${(x + barW/2).toFixed(1)}" y="${(barTop - 4).toFixed(1)}" font-size="8.5" fill="#3C3C43" text-anchor="middle" font-weight="600">${timeLabel}</text>`;
+    }
+    if (showLabel) {
+      bars += `<text x="${(x + barW/2).toFixed(1)}" y="${H - padB + 12}" font-size="8" fill="#8E8E93" text-anchor="middle">${label}</text>`;
+    }
   });
+
+  const subtitle = bucketSize > 1
+    ? `Agrupado de a ${bucketSize} días · ${withData.length}/${rawDays.length} días con registro`
+    : `${withData.length}/${rawDays.length} días con registro`;
 
   container.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
@@ -2429,7 +2535,9 @@ function renderMealChart() {
     </svg>
     <div style="text-align:center;font-size:13px;color:var(--text-2);margin-top:6px">
       Promedio del período: <strong style="color:var(--blue)">${avgLabel}</strong>
-      · ${withData.length}/${days.length} días con registro
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text-2);margin-top:2px">
+      ${subtitle}
     </div>
   `;
 }
